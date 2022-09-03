@@ -1,6 +1,18 @@
+#include <bits/stdc++.h>
+using namespace std;
+
+#ifdef LOCAL
+#include "debug.h"
+#else
+#define debug(...) 42
+#endif
+
+/*Same as 0-index-based, but with one more feature:
+if we have an array consists from non-negative numbers, we can binary search the first index i such that a[0] + a[1] + ... + a[i] >= S in O(log(n)).*/
+
 template <typename T>
 class Fenwick {
-  public:
+public:
   int n;
   int max_log;
   vector <T> tree;
@@ -41,3 +53,22 @@ class Fenwick {
     return res + 1;
   }
 };
+
+
+void run_case() {
+
+}
+
+signed main() {
+  ios::sync_with_stdio(false);
+  cin.tie(0);
+
+  int test_cases = 1;
+  //cin >> test_cases;
+
+  while (test_cases--) {
+    run_case();
+  }
+
+  return 0;
+}
