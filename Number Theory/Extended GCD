@@ -1,0 +1,41 @@
+#include <bits/stdc++.h>
+using namespace std;
+
+#ifdef LOCAL
+#include "debug.h"
+#else
+#define debug(...) 42
+#endif
+
+template <typename T>
+T extended_gcd(T a, T b, T &x, T &y) { //ax + by = gcd(a, b); 
+  if (a == 0) {
+    x = 0;
+    y = 1;
+    return b;
+  }
+  T new_x{};
+  T new_y{};
+  T d = extended_gcd(b % a, a, new_x, new_y);
+  x = new_y - (b / a) * new_x;
+  y = new_x;
+  return d;
+}
+
+void run_case() {
+
+}
+
+signed main() {
+  ios::sync_with_stdio(false);
+  cin.tie(0);
+
+  int test_cases = 1;
+  //cin >> test_cases;
+
+  while (test_cases--) {
+    run_case();
+  }
+
+  return 0;
+}
