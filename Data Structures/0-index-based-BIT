@@ -7,6 +7,9 @@ using namespace std;
 #define debug(...) 42
 #endif
 
+/*Standard 0-index-based binary indexed tree. Allows to answer sum/xor on segment queries and modify single point.
+Also allows to answer prefix max/min queries (note: we should remember that in this case we can only increase and decrease elements, respectively)*/
+
 template <typename T>
 class Fenwick {
   public:
