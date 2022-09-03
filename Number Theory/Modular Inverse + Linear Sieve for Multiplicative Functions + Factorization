@@ -1,0 +1,101 @@
+#include <bits/stdc++.h>
+using namespace std;
+
+#ifdef LOCAL
+#include "debug.h"
+#else
+#define debug(...) 42
+#endif
+
+template <typename T>
+T inverse(T a, T m) {
+  T u = 0, v = 1;
+  while (a != 0) {
+    T t = m / a;
+    m -= t * a;
+    swap(a, m);
+    u -= t * v;
+    swap(u, v);
+  }
+  assert(m == 1);
+  return u;
+}
+
+vector <int> primes;
+vector <int> least_divisor;
+
+void linear_sieve(int n) { //[1, n)
+  least_divisor.assign(n, 0);
+  for (int i = 2; i < n; ++i) {
+    if (least_divisor[i] == 0) {
+      least_divisor[i] = i;
+      primes.push_back(i);
+    }
+    for (int x : primes) {
+      long long next = i * 1LL * x;
+      if (x > least_divisor[i] || next >= n) {
+        break;
+      }
+      least_divisor[next] = x;
+    }
+  }
+}
+
+vector <pair <int, int>> factorization(int x) {
+  assert(!least_divisor.empty());
+  vector <pair <int, int>> res;
+  while (x > 1) {
+    if (!res.empty() && res.back().first == least_divisor[x]) {
+      ++res.back().second;
+    } else {
+      res.emplace_back(least_divisor[x], 1);
+    }
+    x /= least_divisor[x];
+  }
+  return res;
+}
+
+constexpr int N = 1e7 + 10;
+int res[N];
+long long S[N];
+
+void run_case() {
+  int x;
+  cin >> x;
+  cout << res[x] << "\n";
+}
+
+signed main() {
+  ios::sync_with_stdio(false);
+  cin.tie(0);
+
+  linear_sieve(N);
+  S[1] = 1;
+  for (int i = 2; i < N; ++i) {
+    int j = i;
+    S[i] = 1;
+    while (j % least_divisor[i] == 0) {
+      j /= least_divisor[i];
+      S[i] *= least_divisor[i];
+      S[i] += 1;
+    }
+    S[i] *= S[j];
+  }
+
+  memset(res, -1, N * sizeof(int));
+  for (int i = N - 1; i > 0; --i) {
+    if (S[i] < N) {
+      res[S[i]] = i;
+    }
+  }
+
+  int test_cases = 1;
+  cin >> test_cases;
+  
+  while (test_cases--) {
+    run_case();
+  }
+
+  return 0;
+}
+//https://codeforces.com/contest/1512/submission/170765642
