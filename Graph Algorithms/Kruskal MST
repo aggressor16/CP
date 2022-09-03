@@ -1,0 +1,123 @@
+#include <bits/stdc++.h>
+using namespace std;
+
+#ifdef LOCAL
+#include "debug.h"
+#else
+#define debug(...) 42
+#endif
+
+template <typename T>
+class graph {
+public:
+  struct edge {
+    int from;
+    int to;
+    T cost;
+
+    bool operator < (const edge &other) {
+      return this->cost < other.cost;
+    }
+  };
+
+  int n;
+  vector <edge> edges;
+  vector <vector <int>> adj;
+
+  graph() = default;
+  explicit graph(int _n) {
+    n = _n;
+    adj.resize(_n);
+  }
+
+  inline void add(int from, int to, T cost = 1) {
+    assert(0 <= from && from <= n - 1);
+    assert(0 <= to && to <= n - 1);
+    int id = (int)edges.size();
+    edges.push_back({from, to, cost});
+    adj[from].emplace_back(id);
+    adj[to].emplace_back(id);
+  }
+};
+
+class Dsu {
+public:
+  vector <int> parent;
+  vector <int> weight;
+  int connected_components;
+
+  Dsu(int n) {
+    parent.resize(n);
+    weight.assign(n, 1);
+    connected_components = n;
+    iota(parent.begin(), parent.end(), 0);
+  }
+
+  inline int get(int v) {
+    if (parent[v] == v) {
+      return v;
+    }
+    return parent[v] = get(parent[v]);
+  }
+
+  inline void unite(int x, int y) {
+    x = get(x);
+    y = get(y);
+    if (x != y) {
+      if (weight[x] > weight[y]) {
+        swap(x, y);
+      }
+      parent[x] = y;
+      weight[y] += weight[x];
+      connected_components -= 1;
+    }
+  }
+
+  bool connected(int u, int v) {
+    return get(u) == get(v);
+  }
+};
+
+void run_case() {
+  int n, m;
+  cin >> n >> m;
+
+  graph <int> g(n);
+  for (int i = 0; i < m; ++i) {
+    int from, to, cost;
+    cin >> from >> to >> cost;
+    --from; --to;
+    g.add(from, to, cost);
+  }
+
+  vector <graph <int>::edge> edges = g.edges;
+  sort(edges.begin(), edges.end());
+
+  Dsu d(n);
+  graph <int> mst(n);
+
+  long long mst_cost = 0;
+  for (auto &[from, to, cost] : edges) {
+    if (!d.connected(from, to)) {
+      d.unite(from, to);
+      mst_cost += cost;
+      mst.add(from, to, cost);
+    }
+  }
+
+  cout << mst_cost << "\n";
+}
+
+signed main() {
+  ios::sync_with_stdio(false);
+  cin.tie(0);
+
+  int test_cases = 1;
+  //cin >> test_cases;
+
+  while (test_cases--) {
+    run_case();
+  }
+
+  return 0;
+}
