@@ -1,0 +1,275 @@
+#include <bits/stdc++.h>
+using namespace std;
+
+#ifdef LOCAL
+#include "debug.h"
+#else
+#define debug(...) 42
+#endif
+
+class Link_Cut_Tree {
+  //verified:
+  //https://judge.yosupo.jp/problem/dynamic_tree_vertex_add_path_sum
+  // https://codeforces.com/contest/1681/problem/F
+  // ....
+public:
+  struct node {
+    int size = 1; //splay subtree size
+    int vertex = 0;
+    long long sum = 0; // subtree sum
+    long long value = 0; // node's value
+    int subtree_size = 1; //subtree size
+    int virtual_subtree_size = 0; //sum of subtree sizes of "virtual" children (https://codeforces.com/blog/entry/67637)
+    node *left = nullptr;
+    node *right = nullptr;
+    node *parent = nullptr; //parent in splay tree
+    node *pathparent = nullptr; //closest node on path to the root
+    bool reversed = false;
+
+    node() = default;
+    node(int _vertex) {
+      this->vertex = _vertex;
+    }
+
+    //independent splay tree code//
+    void update() {
+      this->size = 1;
+      this->sum = this->value;
+      this->subtree_size = this->virtual_subtree_size + 1;
+      if (this->left != nullptr) {
+        this->sum += this->left->sum;
+        this->size += this->left->size;
+        this->subtree_size += this->left->subtree_size;
+      }
+      if (this->right != nullptr) {
+        this->sum += this->right->sum;
+        this->size += this->right->size;
+        this->subtree_size += this->right->subtree_size;
+      }
+    }
+
+    void push() {
+      if (this->reversed) {
+        swap(this->left, this->right);
+        if (this->left != nullptr) {
+          this->left->reversed ^= 1;
+        }
+        if (this->right != nullptr) {
+          this->right->reversed ^= 1;
+        }
+        this->reversed = false;
+      }
+    }
+
+    void rotate() {
+      node* par = this->parent;
+      node* g = par->parent;
+      if (g != nullptr) {
+        if (g->right == par) {
+          g->right = this;
+        } else {
+          g->left = this;
+        }
+      }
+      par->push();
+      this->push();
+      if (par->left == this) {
+        par->left = this->right;
+        this->right = par;
+        if (par->left != nullptr) {
+          par->left->parent = par;
+        }
+      } else {
+        par->right = this->left;
+        this->left = par;
+        if (par->right != nullptr) {
+          par->right->parent = par;
+        }
+      }
+      par->parent = this;
+      this->parent = g;
+      par->update();
+      this->update();
+      if (g != nullptr) {
+        g->update();
+      }
+    }
+
+    void splay() {
+      while (this->parent != nullptr) {
+        node* par = this->parent;
+        node* g = par->parent;
+        if (par->pathparent != nullptr) {
+          swap(this->pathparent, par->pathparent);
+        }
+        if (g != nullptr) {
+          if (g->pathparent != nullptr) {
+            swap(this->pathparent, g->pathparent);
+          }
+          if ((g->right == par) == (par->right == this)) {
+            par->rotate();
+          } else {
+            this->rotate();
+          }
+        }
+        this->rotate();
+      }
+      this->push();
+    }
+    //..............//
+  };
+
+  vector <node> nodes;
+  Link_Cut_Tree(int n) {
+    nodes.resize(n);
+    for (int i = 0; i < n; ++i) {
+      nodes[i].vertex = i;
+    }
+  }
+
+  node* expose(int v) {
+    node *last = nullptr;
+    node *V = &nodes[v];
+    for (node *curr = V; curr != nullptr; curr = curr->pathparent) {
+      curr->splay();
+      if (curr->right != nullptr) {
+        curr->right->parent = nullptr;
+        curr->right->pathparent = curr;
+        curr->virtual_subtree_size += curr->right->subtree_size; //maintaining correct subtree info...
+      }
+      curr->right = last;
+      if (curr->right != nullptr) {
+        curr->right->parent = curr;
+        curr->right->pathparent = nullptr; //we store straight paths, so if we attach one node to curr, we must disconnect another one
+        curr->virtual_subtree_size -= curr->right->subtree_size;
+      }
+      curr->update();
+      last = curr;
+    }
+    V->splay();
+    return last;
+  }
+
+  void make_root(int v) {
+    expose(v);
+    node *V = &nodes[v];
+    if (V->right != nullptr) {
+      V->virtual_subtree_size += V->right->subtree_size;
+      V->right->pathparent = V;
+      V->right->parent = nullptr;
+      V->right = nullptr;
+      V->update();
+    }
+    V->reversed ^= 1;
+  }
+
+  int depth(int v) {
+    expose(v);
+    return (nodes[v].left != nullptr ? nodes[v].left->size : 0);
+  }
+
+  void modify(int v, int _value) {
+    expose(v);
+    nodes[v].value += _value;
+    nodes[v].update();
+  }
+
+  long long sum(int v) {
+    expose(v);
+    return nodes[v].sum;
+  }
+
+  long long path_sum(int u, int v) {
+    if (u == v) {
+      return nodes[u].value;
+    }
+    int anc = lca(u, v);
+    return sum(u) + sum(v) - 2 * sum(anc) + nodes[anc].value;
+  }
+
+  int lca(int u, int v) {
+    expose(u);
+    return expose(v)->vertex;
+  }
+
+  bool connected(int u, int v) {
+    expose(u);
+    expose(v);
+    return (nodes[u].parent || nodes[u].pathparent); //expose(v) didn't affect u => they're not connected
+  }
+
+  node* find_root(int v) {
+    expose(v);
+    node *x = &nodes[v];
+    while (x->left != nullptr) { //obviously, the leftmost node in splay tree is a root(after expose)
+      x = x->left;
+    }
+    expose(x->vertex);
+    return x;
+  }
+
+  void link(int u, int v) {
+    make_root(u);
+    expose(v);
+    nodes[u].pathparent = &nodes[v];
+    nodes[v].virtual_subtree_size += nodes[u].subtree_size;
+    nodes[v].update();
+  }
+
+  void cut(int u, int v) {
+    make_root(u);
+    expose(v);
+    nodes[v].left->parent = nullptr;
+    nodes[v].left = nullptr;
+    nodes[u].update();
+  }
+
+  int component_size(int v) {
+    return find_root(v)->subtree_size;
+  }
+};
+
+void run_case() {
+  int n;
+  cin >> n;
+
+  Link_Cut_Tree LCT(n);
+  vector <vector <pair <int, int>>> g(n);
+  for (int i = 1; i < n; ++i) {
+    int u, v, x;
+    cin >> u >> v >> x;
+    --u; --v; --x;
+    LCT.link(u, v);
+    g[x].emplace_back(u, v);
+  }
+
+  long long ans = 0;
+  for (int i = 0; i < n; ++i) {
+    for (auto &[u, v] : g[i]) {
+      LCT.cut(u, v);
+    }
+    for (auto &[u, v] : g[i]) {
+      ans += LCT.component_size(u) * 1LL * LCT.component_size(v);
+    }
+    for (auto &[u, v] : g[i]) {
+      LCT.link(u, v);
+    }
+  }
+
+  cout << ans << "\n";
+}
+
+signed main() {
+  ios::sync_with_stdio(false);
+  cin.tie(0);
+
+  int test_cases = 1;
+  //cin >> test_cases;
+
+  while (test_cases--) {
+    run_case();
+  }
+
+  return 0;
+}
+//https://codeforces.com/contest/1681/problem/F
