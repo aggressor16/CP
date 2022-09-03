@@ -7,6 +7,17 @@ using namespace std;
 #define debug(...) 42
 #endif
 
+/*It's a modification of Ji Driver Segment tree - supports the following:
+1) l, r, x -> make all a[i] (l <= i <= r) = min(a[i], x);
+2) l, r, x -> make all a[i] (l <= i <= r) = max(a[i], x);
+3) l, r, x -> make all a[i] (l <= i <= r) = x;
+4) l, r, x -> make all a[i] (l <= i <= r)  = a[i] + x;
+5) l, r -> return sum a[i] (l <= i <= r)
+6) l, r -> return min a[i] (l <= i <= r)
+7) l, r -> return max a[i] (l <= i <= r);
+
+Total complexity is more like O(log^2(n)) than O(log(n)).*/
+
 class Segtree_Beats {
 public:
   static constexpr int64_t INF = 2e18;
