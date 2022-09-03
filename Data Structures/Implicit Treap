@@ -7,6 +7,11 @@ using namespace std;
 #define debug(...) 42
 #endif
 
+/*Data Structure, which allows us to do nearly everything.
+Let's imagine we have an array. We can reverse it's segment,
+cyclically shift the array, add something on segment, assign something, answer the min/max/sum/gcd queries etc. 
+Everything in O(log(n)). Cool, isn't it?*/
+
 
 mt19937 rnd(chrono::steady_clock::now().time_since_epoch().count());
 
