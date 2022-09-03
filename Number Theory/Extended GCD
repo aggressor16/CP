@@ -7,6 +7,8 @@ using namespace std;
 #define debug(...) 42
 #endif
 
+*/With this function we can easily solve diophantine equations ax + by = c. Note: when c % gcd(a, b) != 0, no solution exists.*/
+
 template <typename T>
 T extended_gcd(T a, T b, T &x, T &y) { //ax + by = gcd(a, b); 
   if (a == 0) {
