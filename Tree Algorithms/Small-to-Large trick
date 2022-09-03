@@ -7,6 +7,14 @@ using namespace std;
 #define debug(...) 42
 #endif
 
+/*Task:
+Given a tree with n vertices. Vertex i is colored with color a[i]. For each vertex calculate number of different colors in it's subtree.
+Solution:
+1) Let's make a hash table for each vertex, and do something like dp, but if we will straightly move each color from the child to parent, 
+the total number of moves will be around O(n ^ 2). 
+2) So, we gonna do something like HLD trick with heavy children, and for them we just swap links of the corresponding hash tables.
+3) Thus, the total runtime will be O(n * log(n) * movement time(which is O(1) if we use hash table))*/
+
 struct custom_hash {
   static uint64_t splitmix64(uint64_t x) {
     x += 0x9e3779b97f4a7c15;
