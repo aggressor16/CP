@@ -7,6 +7,10 @@ using namespace std;
 #define debug(...) 42
 #endif
 
+/*Data Structure which allows process queries like F(a[l], a[l + 1], ...,, [r])
+in O(1) with O(n * log(n)) time precalculation and O(n * log(n)) memory.
+Note: F must be idempotent, because segments which we combine to get an answer might intersect each other.*/
+
 template <typename T, class Fun = function<T(const T& a, const T& b)>>
 class SparseTable {
 public:
