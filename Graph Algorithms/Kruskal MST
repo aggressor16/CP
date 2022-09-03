@@ -7,6 +7,10 @@ using namespace std;
 #define debug(...) 42
 #endif
 
+/*Lemma about safe edge says: if there is an edge between unconnected vertices u and v and it's cost is minimal, it's safe edge(we can add it to mst).
+That's all we should know to implement Kruskal MST - we just sort the edges and used DSU for connectivity check.
+Time complexity - O(m * log(m)).*/
+
 template <typename T>
 class graph {
 public:
