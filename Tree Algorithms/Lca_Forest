@@ -7,6 +7,11 @@ using namespace std;
 #define debug(...) 42
 #endif
 
+/*Class for easier work with trees. It provides:
+1) LCA in O(n * log(n) + m) / O(1) via sparse table
+2) tour_list and rev_tour_list can be used to calculate different dp
+3) level ancestor and kth node on path can be found both in O(log n) using HLD tricks*/
+
 template <typename T, bool maximum_mode = false>
 class Sparse_Table {
 public:
