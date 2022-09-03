@@ -7,6 +7,17 @@ using namespace std;
 #define debug(...) 42
 #endif
 
+*/Heavy-Light Decomposition is a powerful technique, which allows us to calculate something on paths/vertices/subtrees and modify them
+We do the following:
+1) For each vertex calculate it's subtree size
+2) For each vertex, let's call the edge to it's child with the biggest subtree "heavy", other will be "light"
+3) Then, we decompose our tree to disjoint straight paths...
+So, what we've done? 
+Let's call "block" either light edge, either long path from heavy edges
+It can be proven that each path contains no more than O(log n) block, and, when we are calculating something on path or modifying it, 
+we make constant number of queries to inner data structure on each block.
+Thus, average query time will be O(log n * inner data structure query time (which is usually O(log n) too))*/
+
 template <typename T>
 class Fenwick {
 public:
