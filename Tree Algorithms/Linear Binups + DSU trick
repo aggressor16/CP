@@ -7,6 +7,17 @@ using namespace std;
 #define debug(...) 42
 #endif
 
+/*Task:
+Given a tree with 1 vertex and no edges. We have to process q queries:
+Type 1: add leaf to vertex which is present in tree at the moment and assign the least unused number to this vertex.
+Type 2: erase vertex which is present in tree, and attach it's children to it's parent
+Type 3: find lca of vertices u and v
+Query 1 can be easily done with linear binups.
+Query 2 can be done this way:
+Let's notice that number of parent is always less than number of child. That allows us to merge vertex which we must erase with it's parent instead of implicit deletion.
+Query 3: find lca with linear binups and.. this vertex could have been already erased, what do we have to do now? Let's remember that when we had to erase it, we merged it with it's parent instead. So, we have just to take minimal number in the connected component in dsu.
+Total complexity is O(1) for deletion, O(1) for insertion and O(log n) for LCA = O(q * log(q)) (since q is the maximum number of vertices in the tree)*/
+
 class Lca_Forest {
 public:
   int n;
