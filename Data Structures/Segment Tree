@@ -7,6 +7,12 @@ using namespace std;
 #define debug(...) 42
 #endif
 
+/*Standart segment tree. Supports lazy propagation and searching for first or last element on given segment which satisfies certain condition.
+It's worth to be noticed, that provided implementation allows to change few lines of code only,
+if you want to handle with really non-standard lazy modifications.
+Example: https://codeforces.com/contest/145/submission/169454220
+*/
+
 class Segtree {
 public:
   struct node {
