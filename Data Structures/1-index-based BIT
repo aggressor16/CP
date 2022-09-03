@@ -1,0 +1,43 @@
+template <typename T>
+class Fenwick {
+  public:
+  int n;
+  int max_log;
+  vector <T> tree;
+
+  explicit Fenwick(int _n) : n(_n) {
+    max_log = 32 - __builtin_clz(n);
+    tree.assign(n + 1, 0);
+  }
+
+  void modify(int p, T v) {
+    while (p <= n) {
+      tree[p] += v;
+      p += p & -p;
+    }
+  }
+
+  T get(int p) {
+    T res{};
+    while (p > 0) {
+      res += tree[p];
+      p -= p & -p;
+    }
+    return res;
+  }
+
+  T get(int l, int r) {
+    return get(r) - get(l - 1);
+  }
+
+  int lower_bound(T s) {
+    int res = 0;
+    for (int k = max_log - 1; k >= 0; --k) {
+      if (res + (1 << k) <= n && tree[res + (1 << k)] < s) {
+        res += (1 << k);
+        s -= tree[res];
+      }
+    }
+    return res + 1;
+  }
+};
