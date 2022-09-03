@@ -1,0 +1,169 @@
+#include <bits/stdc++.h>
+using namespace std;
+
+#ifdef LOCAL
+#include "debug.h"
+#else
+#define debug(...) 42
+#endif
+
+
+mt19937 rnd(chrono::steady_clock::now().time_since_epoch().count());
+
+class Treap {
+  struct node {
+    int size = 1;
+    int prior = 0;
+    int value = 0;
+    bool reversed = 0;
+    node *left = nullptr;
+    node *right = nullptr;
+
+    explicit node(int x) : value(x), prior(rnd()){
+    }
+    
+    void update() {
+      this->size = 1;
+      if (this->left != nullptr) {
+        this->size += this->left->size;
+      }
+      if (this->right != nullptr) {
+        this->size += this->right->size;
+      }
+    }
+    
+    void push() {
+      if (this->reversed) {
+        swap(this->left, this->right);
+      }
+      if (this->left != nullptr) {
+        this->left->reversed ^= 1;
+      }
+      if (this->right != nullptr) {
+        this->right->reversed ^= 1;
+      }
+      this->reversed = 0;
+    }
+  };
+
+  static node* merge(node *l, node *r) {
+    if (l != nullptr) {
+      l->push();
+    } 
+    if (r != nullptr) {
+      r->push();
+    }
+    if (l == nullptr) {
+      return r;
+    }
+    if (r == nullptr) {
+      return l;
+    }
+    if (l->prior > r->prior) {
+      l->right = merge(l->right, r);
+      l->update();
+      return l;
+    } else {
+      r->left = merge(l, r->left);
+      r->update();
+      return r;
+    }
+  }
+
+  static pair <node*, node*> split(node *&v, int k) {
+    if (v == nullptr) {
+      return {nullptr, nullptr};
+    }
+    v->push();
+    int left_size = (v->left ? v->left->size : 0);
+    if (left_size + 1 <= k) {
+      auto [L, R] = split(v->right, k - left_size - 1);
+      v->right = L;
+      v->update();
+      return {v, R};
+    } else {
+      auto [L, R] = split(v->left, k);
+      v->left = R;
+      v->update();
+      return {L, v};
+    }
+  }
+
+  void insert_back(node *&v, node* x) {
+    v = merge(v, x);
+  }
+
+  void reverse(node *&v, int l, int r) {
+    auto [Mid, R] = split(v, r);
+    auto [L, x] = split(Mid, l - 1);
+    if (x != nullptr) {
+      x->reversed ^= 1;
+    }
+    v = merge(merge(L, x), R);
+  }
+  
+  void insert(node *&v, int pos, node *x) {
+    auto [L, R] = split(v, pos - 1);
+    v = merge(merge(L, x), R);
+  }
+  
+  void print_in_order(node *&v) {
+    v->push();
+    if (v->left != nullptr) {
+      print_in_order(v->left);
+    }
+    cout << v->value << " ";
+    if (v->right != nullptr) {
+      print_in_order(v->right);
+    }
+  }
+
+public:
+  node *root = nullptr;
+
+  Treap() {
+  }
+  
+  explicit Treap(int n) {
+    for (int i = 1; i <= n; ++i) {
+      insert_back(this->root, new node(i));
+    }
+  }
+  
+  explicit Treap(const vector <int> &v) {
+    root = nullptr;
+    for (auto &x : v) {
+      insert_back(this->root, new node(x));
+    }
+  }
+  
+  void reverse(int l, int r) {
+    reverse(this->root, l, r);
+  }
+  
+  void insert(int pos, node *x) {
+    insert(this->root, pos, x);
+  }
+  
+  void print_in_order() {
+    print_in_order(this->root);
+  }
+};
+
+void run_case() {
+
+}
+
+signed main() {
+  ios::sync_with_stdio(false);
+  cin.tie(0);
+
+  int test_cases = 1;
+  //cin >> test_cases;
+
+  while (test_cases--) {
+    run_case();
+  }
+
+  return 0;
+}
