@@ -1,0 +1,88 @@
+#include <bits/stdc++.h>
+using namespace std;
+
+#ifdef LOCAL
+#include "debug.h"
+#else
+#define debug(...) 42
+#endif
+
+long long binary_gcd(long long a, long long b) {
+  if (a == 0) {
+    return b;
+  }
+  if (b == 0) {
+    return a;
+  }
+
+  int a_ctz = __builtin_ctzll(a);
+  int b_ctz = __builtin_ctzll(b);
+  int shift = min(a_ctz, b_ctz);
+  b >>= b_ctz;
+
+  while (a != 0) {
+    a >>= a_ctz;
+    long long delta = b - a;
+    a_ctz = __builtin_ctzll(delta);
+    b = min(a, b);
+    a = abs(delta);
+  }
+
+  return b << shift;
+}
+
+long long gcd(long long a, long long b) {
+  while (b != 0) {
+    a %= b;
+    swap(a, b);
+  }
+  return a;
+}
+
+mt19937 rnd(chrono::steady_clock::now().time_since_epoch().count());
+constexpr int iters = 10000000;
+
+void run_case() {
+  unsigned long long sum_1 = 0;
+  auto start_1 = chrono::steady_clock::now();
+
+  for (int i = 0; i < iters; ++i) {
+    long long x = rnd();
+    long long y = rnd();
+    sum_1 += gcd(x, y);
+  }
+
+  auto end_1 = chrono::steady_clock::now();
+
+  unsigned long long sum_2 = 0;
+  auto start_2 = chrono::steady_clock::now();
+
+  for (int i = 0; i < iters; ++i) {
+    long long x = rnd();
+    long long y = rnd();
+    sum_2 += binary_gcd(x, y);
+  }
+
+  auto end_2 = chrono::steady_clock::now();
+
+  cout << sum_1 + sum_2 << "\n";
+  auto diff_1 = end_1 - start_1;
+  auto diff_2 = end_2 - start_2;
+
+  cout << "Usual gcd : " << chrono::duration <double, milli> (diff_1).count() << " ms" << "\n";
+  cout << "Binary gcd : " << chrono::duration <double, milli> (diff_2).count() << " ms" << "\n";
+}
+
+signed main() {
+  ios::sync_with_stdio(false);
+  cin.tie(0);
+
+  int test_cases = 1;
+  //cin >> test_cases;
+
+  while (test_cases--) {
+    run_case();
+  }
+
+  return 0;
+}
