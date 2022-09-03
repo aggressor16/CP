@@ -1,0 +1,133 @@
+class Dsu {
+public:
+  int components;
+  vector <int> saves;
+  vector <int> parent;
+  vector <int> weight;
+  vector <pair <int, int>> ops;
+  
+  /*And yes.. we do Divide&Conquer again. In this task, we simply want to do 3 operations:
+  1) Link (u, v) - add an edge between u and v
+  2) Cut(u, v) - cut and edge between u and v
+  3) Component_Size(v) - how many vertices are in v's connected component
+  So, we do divide&conquer on time(!). Suppose we have time segment [l..r] and for all edges we know [ql..qr] - period of "life" of this edge.
+  For all edges such that e.ql <= l && r <= e.qr, we have to add them in dsu. All other queries which intersect the left half of our time segment should be added
+  to left queries, those which intersect with right half - to right queries. Invariant is so simple: for each recursive call we just have to add certain edges,
+  run solve(l, mid) and solve(mid + 1, r), then rollback the changes we've made. If l == r, then we can just answer the given query(if it exists).
+  https://codeforces.com/contest/1681/problem/F
+  Fun fact: despite it works in O(n * log^2(n)) ((n * log(n)) from D&C and log(n) from DSU, since we don't use path compression), it's still faster than Link-Cut-Tree.
+  */
+ 
+  explicit Dsu(int n) : components(n) {
+    parent.resize(n);
+    weight.assign(n, 1);
+    iota(parent.begin(), parent.end(), 0);
+  }
+ 
+  int get(int v) {
+    while (parent[v] != v) {
+      v = parent[v];
+    }
+    return v;
+  }
+ 
+  void unite(int x, int y) {
+    x = get(x);
+    y = get(y);
+    if (x != y) {
+      if (weight[x] > weight[y]) {
+        swap(x, y);
+      }
+      components -= 1;
+      ops.emplace_back(x, parent[x]);
+      parent[x] = y;
+      ops.emplace_back(~y, weight[y]);
+      weight[y] += weight[x];
+    }
+  }
+ 
+  void save() {
+    int t = (int)ops.size();
+    saves.emplace_back(t);
+  }
+ 
+  void rollback() {
+    int t = saves.back();
+    saves.pop_back();
+    while ((int)ops.size() > t) {
+      int i = ops.back().first;
+      int j = ops.back().second;
+      ops.pop_back();
+      if (i >= 0) {
+        parent[i] = j;
+        components += 1;
+      } else {
+        weight[~i] = j;
+      }
+    }
+  }
+};
+ 
+void run_case() {
+  int n;
+  cin >> n;
+ 
+  vector <vector <pair <int, int>>> g(n);
+  for (int i = 1; i < n; ++i) {
+    int u, v, x;
+    cin >> u >> v >> x;
+    --u; --v; --x;
+    g[x].emplace_back(u, v);
+  }
+ 
+  Dsu d(n);
+  int64_t ans = 0;
+ 
+  function <void(int, int)> solve = [&](int l, int r) {
+    if (l == r) {
+      for (auto [from, to] : g[r]) {
+        int u = d.get(from);
+        int v = d.get(to);
+        ans += d.weight[u] * 1LL * d.weight[v];
+      }
+      return;
+    }
+ 
+    int mid = (l + r) >> 1;
+ 
+    d.save();
+    for (int i = mid + 1; i <= r; ++i) {
+      for (auto [from, to] : g[i]) {
+        d.unite(from, to);
+      }
+    }
+    solve(l, mid);
+    d.rollback();
+ 
+    d.save();
+    for (int i = l; i <= mid; ++i) {
+      for (auto [from, to] : g[i]) {
+        d.unite(from, to);
+      }
+    }
+    solve(mid + 1, r);
+    d.rollback();
+  };
+ 
+  solve(0, n - 1);
+  cout << ans << "\n";
+}
+ 
+ 
+int32_t main() {
+  ios::sync_with_stdio(false);
+  cin.tie(0);
+ 
+  int test_cases = 1;
+  //cin >> test_cases;
+  while (test_cases--) {
+    run_case();
+  }
+ 
+  return 0;
+}
