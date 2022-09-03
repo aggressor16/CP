@@ -7,6 +7,10 @@ using namespace std;
 #define debug(...) 42
 #endif
 
+/*We have added the save and rollback options. 
+Also, we have to notice, that if we want to discard some changes, using path compression heuristic will not bring any profit. 
+So, the complexity becomes O(log(n)) per query. This version of Union-Find is used in DCP Offline problem.*/
+
 class Dsu {
 public:
   vector <int> saves;
