@@ -8,25 +8,25 @@ using namespace std;
 #endif
 
 /*Topological Sort:
-Yields permutation of vertices p[0], p[i], ..., p[n - 1] with following condition: 
+Yields permutation of vertices p[0], p[i], ..., p[n - 1] with following condition:
 for every edge (from, to) in digraph from will be earlier than to in topsort array.
-If digraph is non acyclic, yields an empty vector.
+If digraph is non-acyclic, yields an empty vector.
 
 SCC and 2-SAT:
 Task: Given n booleans and several conditions like (a || b) && (!c -> d)....
 We have to assign 0 or 1 to each boolean and make all conditions satisfied, or find out that there is no solution.
-How will we solve that? Let's build a digraph on 2 * n vertices (vertex 2 * i corresponds to ith boolean = false and 2 * i + 1 - to ith boolean = true) 
-and transform each condition to a couple of implication edges. Thus, we receive a digraph with O(n) vertices and O(m) edges 
-(since each condition decomposes to constant number of edges). 
+How will we solve that? Let's build a digraph on 2 * n vertices (vertex 2 * I correspond to ith boolean = false and 2 * i + 1 - to ith boolean = true)
+and transform each condition to a couple of implication edges. Thus, we receive a digraph with O(n) vertices and O(m) edges
+(since each condition decomposes to constant number of edges).
 Let's find all strongly connected components in it. Strongly connected component (scc) is a max subset of vertices (let it be S),
- such that for each u, v (u ∈ S && v ∈ s) v is reachable from u and u is reachable from v. Let's denote c[i] as number of scc, which contains i.  
-So, what we've done? For each boolean i, let's look on pair of vertices 2 * i and 2 * i + 1. If they're reachable from each other(it means c[2 * i] == c[2 * i  +1]), 
-then no solution exists, because whichever value we assign to this boolean, we come to the contradiction. 
-Else, since scc's are topsorted, it's quite easy to determine which value we have to assign. 
-If c[2 * i] < c[2 * i + 1], it means, that i = true is reachable from i = false, so, we have to assign 1 to this boolean, otherwise we have to assign 0. 
+ such that for each u, v (u ∈ S && v ∈ s) v is reachable from u and u is reachable from v. Let's denote c[i] as number of scc, which contains i.
+So, what we've done? For each boolean i, let's look on pair of vertices 2 * i and 2 * i + 1. If they're reachable from each other(it means c[2 * i] == c[2 * i  +1]),
+then no solution exists, because whichever value we assign to this boolean, we come to the contradiction.
+Else, since scc's are top-sorted, it's quite easy to determine which value we have to assign.
+If c[2 * i] < c[2 * i + 1], it means, that i = true is reachable from i = false, so, we have to assign 1 to this boolean, otherwise we have to assign 0.
 Time complexity - O(n + m), since SCC searching algorithm is linear.
 
-Dijkstra: finds an array of lengths of shortest paths from given vertex s to all others vertices. Runs in O(E * log(V)). 
+Dijkstra: finds an array of lengths of the shortest paths from given vertex s to all others vertices. Runs in O(E * log(V)).
 Bonus: there is no problem to recover the paths, since we pass the parent array to procedure by reference.*/
 
 template <typename T>
