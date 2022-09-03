@@ -1,1 +1,208 @@
+#include <bits/stdc++.h>
+using namespace std;
 
+#ifdef LOCAL
+#include "debug.h"
+#else
+#define debug(...) 42
+#endif
+
+template <typename T>
+class Fenwick {
+public:
+  int n;
+  vector <T> tree;
+
+  Fenwick() = default;
+  explicit Fenwick(int _n) : n(_n) {
+    tree.assign(n, 0);
+  }
+
+  void modify(int p, int v) {
+    while (p < n) {
+      tree[p] += v;
+      p |= p + 1;
+    }
+  }
+
+  T get(int p) {
+    T res{};
+    while (p >= 0) {
+      res += tree[p];
+      p = (p & (p + 1)) - 1;
+    }
+    return res;
+  }
+
+  T get(int l, int r) {
+    return get(r) - get(l - 1);
+  }
+};
+
+class Heavy_Light_Decomposition {
+public:
+  int n;
+  int timer;
+  vector <int> tour_start;
+  vector <int> tour_end;
+  vector <int> head;
+  vector <int> parent;
+  vector <int> subtree_size;
+  vector <vector <int>> g;
+  Fenwick <long long> tree;
+
+  void dfs(int v, int par) {
+    subtree_size[v] = 1;
+    for (int &to : g[v]) {
+      if (to != par) {
+        parent[to] = v;
+        dfs(to, v);
+        subtree_size[v] += subtree_size[to];
+        if (parent[v] == g[v][0] || subtree_size[to] > subtree_size[g[v][0]]) {
+          swap(to, g[v][0]);
+        }
+      }
+    }
+  }
+
+  void decompose(int v, int par) {
+    tour_start[v] = timer++;
+    bool heavy_child = true;
+    for (int &to : g[v]) {
+      if (to != par) {
+        if (heavy_child) {
+          head[to] = head[v];
+          heavy_child ^= 1;
+        } else {
+          head[to] = to;
+        }
+        decompose(to, v);
+      }
+    }
+    tour_end[v] = timer;
+  }
+
+  int lca(int u, int v) {
+    while (head[u] != head[v]) {
+      if (tour_start[u] > tour_start[v]) {
+        swap(u, v);
+      }
+      v = parent[head[v]];
+    }
+    return (tour_start[u] < tour_start[v] ? u : v);
+  }
+
+  Heavy_Light_Decomposition(const vector <vector <int>> &_g, const vector <int> &_values, int root = 0) {
+    g = _g;
+    timer = 0;
+    n = (int)g.size();
+    tour_start.resize(n);
+    tour_end.resize(n);
+    head.resize(n);
+    parent.resize(n);
+    subtree_size.resize(n);
+    tree = Fenwick <long long> (n);
+
+    parent[root] = head[root] = root;
+    dfs(root, -1);
+    decompose(root, -1);
+
+    if (!_values.empty()) {
+      for (int v = 0; v < n; ++v) {
+        modify_vertex(v, _values[v]);
+      }
+    }
+  }
+
+  void modify_vertex(int v, const int &value) {
+    tree.modify(tour_start[v], value);
+  }
+
+  void modify_straight_path(int v, int anc, const int &value) {
+    while (head[v] != head[anc]) {
+      //tree.modify(tour_start[head[v]], tour_start[v], value);
+      v = parent[head[v]];
+    }
+    //tree.modify(tour_start[anc], tour_start[v], value);
+  }
+
+  void modify_path(int u, int v, const int &value) {
+    int anc = lca(u, v);
+    modify_straight_path(u, anc, value);
+    modify_straight_path(v, anc, value);
+    modify_vertex(anc, -value);
+  }
+
+  void modify_subtree(int v, const int &value) {
+    //tree.modify(tour_start[v], tour_end[v] - 1, value);
+  }
+
+  long long vertex_sum(int v) {
+    return tree.get(tour_start[v], tour_start[v]);
+  }
+
+  long long straight_path_sum(int v, int anc) {
+    long long res = 0;
+    while (head[v] != head[anc]) {
+      res += tree.get(tour_start[head[v]], tour_start[v]);
+      v = parent[head[v]];
+    }
+    res += tree.get(tour_start[anc], tour_start[v]);
+    return res;
+  }
+
+  long long path_sum(int u, int v) {
+    int anc = lca(u, v);
+    long long res = 0;
+    res += straight_path_sum(u, anc);
+    res += straight_path_sum(v, anc);
+    return res - vertex_sum(anc);
+  }
+
+  long long subtree_sum(int v) {
+    return tree.get(tour_start[v], tour_end[v] - 1);
+  }
+};
+
+void run_case() {
+  int n, q;
+  cin >> n >> q;
+
+  vector <int> values(n);
+  for (auto &v : values) {
+    cin >> v;
+  }
+
+  vector <vector <int>> g(n);
+  for (int i = 1; i < n; ++i) {
+    int u, v;
+    cin >> u >> v;
+    g[u].push_back(v);
+    g[v].push_back(u);
+  }
+
+  Heavy_Light_Decomposition HLD(g, values);
+  while (q--) {
+    int t, u, v;
+    cin >> t >> u >> v;
+    if (t == 0) {
+      HLD.modify_vertex(u, v);
+    } else {
+      cout << HLD.path_sum(u, v) << "\n";
+    }
+  }
+}
+
+int32_t main() {
+  ios::sync_with_stdio(false);
+  cin.tie(0);
+
+  int test_cases = 1;
+  //cin >> test_cases;
+  while (test_cases--) {
+    run_case();
+  }
+
+  return 0;
+}
+//https://judge.yosupo.jp/problem/vertex_add_path_sum
