@@ -7,6 +7,16 @@ using namespace std;
 #define debug(...) 42
 #endif
 
+/*Centroid Decomposition is something like Divide&Conquer on trees.
+Simply Centroid is a node if we delete it, it makes some subtrees where every subtree size must be less than sz/2 { sz is the size of the current tree T.}
+So, Centroid Decomposition is a following process:
+1) We find centroid of current tree T
+2) Calculate something.... (depends on task)
+3) Remove centroid. Tree T decomposes into trees T1, T2, ..., Tk
+4) Repeat first step with trees T1, T2, ..., Tk
+And, if we suffer a bit, we can answer different type of queries like (find the closest vertex to v which satisfies an arbitrary condition),
+or "how many paths satisfy an arbitrary condition" etc.*/
+
 template <typename T>
 class Fenwick {
   public:
