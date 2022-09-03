@@ -1,0 +1,81 @@
+#include <bits/stdc++.h>
+using namespace std;
+
+#ifdef LOCAL
+#include "debug.h"
+#else
+#define debug(...) 42
+#endif
+
+/*Z-function is an array of length |S|, where S is a given string.
+  Z[i] = length of longest sequence s[i], s[i + 1],...s[k], 
+  where s[i] == s[0] && s[i + 1] == s[1] && ... && s[k] == s[i + k];
+  Suddenly, if we can calculate it in O(|S|), we can also solve 2 
+  following tasks:
+  1) Given strings s and t. Find how many times t appears in s like a substring and find start indices of these occurences.
+  2) Find period of string s - string t which is prefix of s and s can be represented as x * t (x == |s| / |t|)*/
+
+vector <int> z_function(const string &s) {
+  int n = (int)s.size();
+  vector <int> z(n);
+  int j = 0;
+  for (int i = 1; i < n; ++i) {
+    z[i] = min(z[j] + j - i, z[i - j]);
+    z[i] = max(z[i], 0);
+    while (s[z[i]] == s[i + z[i]]) {
+      z[i] += 1;
+    }
+    if (i + z[i] > j + z[j]) {
+      j = i;
+    }
+  }
+  return z;
+}
+
+vector <int> find_occurences(const string &s, const string &t) {
+  int n = (int)s.size();
+  int m = (int)t.size();
+  vector <int> res;
+  if (n < m) {
+    return res;
+  }
+  string new_s = t + s;
+  vector <int> z = z_function(new_s);
+  for (int i = m; i < n + m; ++i) {
+    if (m <= z[i]) {
+      res.emplace_back(i - m);
+    }
+  }
+  return res;
+}
+
+int period(const string &s) {
+  int n = (int)s.size();
+  vector <int> z = z_function(s);
+  int res = n;
+  for (int i = 1; i < n; ++i) {
+    if (n % i == 0 && i + z[i] == n) {
+      res = i;
+      break;
+    }
+  }
+  return res;
+}
+
+void run_case() {
+  
+}
+
+signed main() {
+  ios::sync_with_stdio(false);
+  cin.tie(0);
+
+  int test_cases = 1;
+  //cin >> test_cases;
+
+  while (test_cases--) {
+    run_case();
+  }
+
+  return 0;
+}
