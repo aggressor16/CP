@@ -1,0 +1,202 @@
+#include <bits/stdc++.h>
+using namespace std;
+
+#ifdef LOCAL
+#include "debug.h"
+#else
+#define debug(...) 42
+#endif
+
+template <typename T>
+class Fenwick {
+  public:
+  int n;
+  int max_log;
+  vector <T> tree;
+
+  Fenwick() = default;
+  explicit Fenwick(int _n) : n(_n) {
+    max_log = 32 - __builtin_clz(n);
+    tree.assign(n + 1, 0);
+  }
+
+  void modify(int p, T v) {
+    while (p <= n) {
+      tree[p] += v;
+      p += p & -p;
+    }
+  }
+
+  T get(int p) {
+    T res{};
+    while (p > 0) {
+      res += tree[p];
+      p -= p & -p;
+    }
+    return res;
+  }
+
+  T get(int l, int r) {
+    return get(r) - get(l - 1);
+  }
+
+  int lower_bound(T s) {
+    if (this->get(n) < s) {
+      return -1;
+    }
+    int res = 0;
+    for (int k = max_log - 1; k >= 0; --k) {
+      if (res + (1 << k) <= n && tree[res + (1 << k)] < s) {
+        res += (1 << k);
+        s -= tree[res];
+      }
+    }
+    return res + 1;
+  }
+};
+
+class Centroid_Decomposition {
+public:
+  int n;
+  int max_log; //upper bound of the height of decomposition tree
+  vector <bool> used; //we don't want to remove vertices explicitly
+  vector <int> subtree_size; // ...
+  vector <vector <int>> adj;
+  vector <vector <int>> dist; //dist[v][level] = distance from v to its centroid of order = level
+  vector <Fenwick <int>> trees; //array of binary indexed trees which we need to handle updates
+  vector <vector <int>> centroid; // centroid[v][level] = v's centroid of order = level
+
+  Centroid_Decomposition(const vector <vector <int>> &_adj) {
+    adj = _adj;
+    n = (int)adj.size();
+    max_log = 32 - __builtin_clz(n);
+
+    used.resize(n);
+    trees.resize(n);
+    subtree_size.resize(n);
+    dist.resize(n, vector <int> (max_log));
+    centroid.assign(n, vector <int> (max_log, -1));
+
+    size_dfs(0, -1);
+    build(find_centroid(0, -1, n >> 1), 0);
+  }
+
+  void size_dfs(int v, int par) {
+    subtree_size[v] = 1;
+    for (int to : adj[v]) {
+      if (!used[to] && to != par) {
+        size_dfs(to, v);
+        subtree_size[v] += subtree_size[to];
+      }
+    }
+  }
+
+  int find_centroid(int v, int par, int S) { //make sure you've divided S by 2 before calling this
+    for (int to : adj[v]) {
+      if (!used[to] && to != par && subtree_size[to] > S) {
+        return find_centroid(to, v, S);
+      }
+    }
+    return v;
+  }
+
+  void dfs(int v, int par, int order, int &max_depth) {
+    dist[v][order] = dist[par][order] + 1;
+    centroid[v][order] = centroid[par][order];
+    max_depth = max(max_depth, dist[v][order]);
+    for (int to : adj[v]) {
+      if (!used[to] && to != par) {
+        dfs(to, v, order, max_depth);
+      }
+    }
+  }
+
+  void build(int v, int order) {
+    size_dfs(v, -1);
+    dist[v][order] = 0;
+    centroid[v][order] = v;
+
+    int max_depth = 0;
+    for (int to : adj[v]) {
+      if (!used[to]) {
+        dfs(to, v, order, max_depth);
+      }
+    }
+
+    used[v] = true;
+    trees[v] = Fenwick <int> (max_depth + 1);
+    for (int to : adj[v]) {
+      if (!used[to]) {
+        build(find_centroid(to, v, subtree_size[to] >> 1), order + 1);
+      }
+    }
+  }
+
+  void color_red(int v) {
+    for (int level = 0; level < max_log; ++level) {
+      if (centroid[v][level] == -1) {
+        continue;
+      }
+      trees[centroid[v][level]].modify(dist[v][level] + 1, 1);
+    }
+  }
+
+  int query(int v) {
+    int res = numeric_limits <int>::max();
+    for (int level = max_log - 1; level >= 0; --level) {
+      int C = centroid[v][level];
+      if (C == -1) {
+        continue;
+      }
+      int new_res = trees[C].lower_bound(1);
+      if (new_res == -1) {
+        continue;
+      }
+      res = min(res, new_res + dist[v][level] - 1);
+    }
+    return res;
+  }
+};
+
+void run_case() {
+  int n, q;
+  cin >> n >> q;
+
+  vector <vector <int>> adj(n);
+  for (int i = 1; i < n; ++i) {
+    int u, v;
+    cin >> u >> v;
+    --u; --v;
+    adj[u].push_back(v);
+    adj[v].push_back(u);
+  }
+
+  Centroid_Decomposition CD(adj);
+
+  CD.color_red(0);
+  while (q--) {
+    int type, vertex;
+    cin >> type >> vertex;
+
+    --vertex;
+    if (type == 1) {
+      CD.color_red(vertex);
+    } else {
+      cout << CD.query(vertex) << "\n";
+    }
+  }
+}
+
+int32_t main() {
+  ios::sync_with_stdio(false);
+  cin.tie(0);
+
+  int test_cases = 1;
+  //cin >> test_cases;
+  while (test_cases--) {
+    run_case();
+  }
+
+  return 0;
+}
+https://codeforces.com/contest/342/problem/E
