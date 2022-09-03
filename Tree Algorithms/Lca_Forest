@@ -1,0 +1,330 @@
+#include <bits/stdc++.h>
+using namespace std;
+
+#ifdef LOCAL
+#include "debug.h"
+#else
+#define debug(...) 42
+#endif
+
+template <typename T, bool maximum_mode = false>
+class Sparse_Table {
+public:
+  static int msb(uint32_t x) { //most significant bit
+    return (x == 0 ? -1 : 31 - __builtin_clz(x));
+  }
+
+  int n;
+  vector <T> values;
+  vector <vector <int>> mat;
+
+  Sparse_Table(const vector <T> &_values = {}) {
+    if (!_values.empty()) {
+      build(_values);
+    }
+  }
+
+  int better_index(int l, int r) const {
+    if (values[l] == values[r]) {
+      return l;
+    }
+    return (maximum_mode ? values[l] > values[r] ? l : r : values[l] < values[r] ? l : r);
+  }
+
+  void build(const vector <T> &_values) {
+    values = _values;
+    n = (int)_values.size();
+    int levels = msb(n) + 1;
+
+    mat.resize(levels);
+    for (int k = 0; k < levels; ++k) {
+      mat[k].resize(n - (1 << k) + 1);
+    }
+
+    iota(mat[0].begin(), mat[0].end(), 0);
+    for (int k = 1; k < levels; ++k) {
+      for (int i = 0; i <= n - (1 << k); ++i) {
+        mat[k][i] = better_index(mat[k - 1][i], mat[k - 1][i + (1 << (k - 1))]);
+      }
+    }
+  }
+
+  int get_index(int l, int r) const {
+    assert(0 <= l && l <= r && r <= n - 1);
+    int k = msb(r - l + 1);
+    return better_index(mat[k][l], mat[k][r - (1 << k) + 1]);
+  }
+
+  T get_value(int l, int r) const {
+    return values[get_index(l, r)];
+  }
+};
+
+class Lca_Forest {
+public:
+  int n;
+  vector <int> head;
+  vector <int> depth;
+  vector <int> euler;
+  vector <int> parent;
+  vector <int> tour_end;
+  vector <int> tour_list;
+  vector <int> postorder;
+  vector <int> tour_start;
+  vector <int> subtree_size;
+  vector <int> rev_tour_list;
+  vector <int> first_occurence;
+  vector <vector <int>> adj;
+  Sparse_Table <int> RMQ;
+
+  Lca_Forest(int _n) {
+    n = _n;
+    init();
+  }
+
+  Lca_Forest(const vector <vector <int>> &_adj) {
+    n = (int)_adj.size();
+    init();
+    adj = _adj;
+  }
+
+  void init() {
+    adj.resize(n);
+    head.resize(n);
+    depth.resize(n);
+    parent.resize(n);
+    tour_end.resize(n);
+    tour_list.resize(n);
+    postorder.resize(n);
+    tour_start.resize(n);
+    subtree_size.resize(n);
+    first_occurence.resize(n);
+  }
+
+  inline void add_edge(int u, int v) {
+    adj[u].push_back(v);
+    adj[v].push_back(u);
+  }
+
+  void dfs(int v, int par) {
+    parent[v] = par;
+    depth[v] = (par < 0 ? 0 : depth[par] + 1);
+    subtree_size[v] = 1;
+    
+    adj[v].erase(remove(adj[v].begin(), adj[v].end(), par), adj[v].end()); //removing edge from v to its parent
+    for (int to : adj[v]) {
+      dfs(to, v);
+      subtree_size[v] += subtree_size[to];
+    }
+    
+    sort(adj[v].begin(), adj[v].end(), [&](const int &u, const int &v) { //HLD-style reordering
+      return subtree_size[u] > subtree_size[v];
+    });
+  }
+
+  int tour;
+  int post_tour;
+
+  void tour_dfs(int v, bool heavy) {
+    head[v] = (heavy ? head[parent[v]] : v);
+    first_occurence[v] = (int)euler.size();
+    euler.push_back(v);
+    tour_list[tour] = v;
+    tour_start[v] = tour++;
+    bool heavy_child = true;
+    
+    for (int to : adj[v]) {
+      tour_dfs(to, heavy_child);
+      euler.push_back(v);
+      heavy_child = false;
+    }
+    
+    tour_end[v] = tour;
+    postorder[v] = post_tour++;
+  }
+
+  void build(int root = -1, bool build_lca = true) {
+    parent.assign(n, -1);
+    if (0 <= root && root <= n - 1) {
+      dfs(root, -1);
+    }
+    
+    for (int i = 0; i < n; ++i) {
+      if (i != root && parent[i] < 0) {
+        dfs(i, -1);
+      }
+    }
+    
+    euler.clear();
+    tour = post_tour = 0;
+    euler.reserve(2 * n);
+    for (int i = 0; i < n; ++i) {
+      if (parent[i] < 0) {
+        tour_dfs(i, false);
+        euler.push_back(-1); // separating connected components
+      }
+    }
+    
+    rev_tour_list = tour_list;
+    reverse(rev_tour_list.begin(), rev_tour_list.end());
+    assert((int)euler.size() == 2 * n);
+    
+    vector <int> euler_depths;
+    euler_depths.reserve((int)euler.size());
+    for (int v : euler) {
+      euler_depths.push_back(v < 0 ? v : depth[v]);
+    }
+    
+    if (build_lca) {
+      RMQ.build(euler_depths);
+    }
+  }
+
+  inline bool is_ancestor(int u, int v) const {
+    return (tour_start[u] <= tour_start[v] && tour_start[v] < tour_end[u]);
+  }
+
+  int lca(int u, int v) const { // yields -1 if u and v aren't connected
+    u = first_occurence[u];
+    v = first_occurence[v];
+    if (u > v) {
+      swap(u, v);
+    }
+    return euler[RMQ.get_index(u, v)];
+  }
+
+  int level_ancestor(int v, int k) const {
+    if (k > depth[v]) {
+      return -1;
+    }
+    
+    while (v >= 0) {
+      int root = head[v];
+      if (depth[root] <= depth[v] - k) {
+        return tour_list[tour_start[v] - k];
+      }
+      k -= depth[v] - depth[root] + 1;
+      v = parent[root];
+    }
+    
+    return v;
+  }
+
+  int kth_vertex_on_path(int u, int v, int k) const {
+    int anc = lca(u, v);
+    int first_half = depth[u] - depth[anc];
+    int second_half = depth[v] - depth[anc];
+    
+    if (0 > k || k > first_half + second_half) {
+      return -1;
+    }
+    
+    if (k < first_half) {
+      return level_ancestor(u, k);
+    } else {
+      return level_ancestor(v, first_half + second_half - k);
+    }
+  }
+
+  bool on_path(int x, int u, int v) const {
+    return ((is_ancestor(x, u) || is_ancestor(x, v)) && is_ancestor(lca(u, v), x));
+  }
+
+  int distance(int u, int v) const {
+    return depth[u] + depth[v] - 2 * depth[lca(u, v)];
+  }
+
+  array <int, 3> get_diameter() const {
+    pair <int, int> u_max = {-1, -1};
+    pair <int, int> ux_max = {-1, -1};
+    array <int, 3> uxv_max = {-1, -1, -1};
+    for (int v : euler) {
+      if (v < 0) {
+        break;
+      }
+      u_max = max(u_max, {depth[v], v});
+      ux_max = max(ux_max, {u_max.first - 2 * depth[v], u_max.second});
+      uxv_max = max(uxv_max, {ux_max.first + depth[v], ux_max.second, v});
+    }
+    return uxv_max;
+  }
+
+  pair <int, int> get_center() const {
+    auto [length, u, v] = get_diameter();
+    return {kth_vertex_on_path(u, v, length >> 1), kth_vertex_on_path(u, v, (length + 1) >> 1)};
+  }
+};
+
+void run_case() {
+  int n;
+  cin >> n;
+
+  Lca_Forest g(n);
+  for (int i = 1; i < n; ++i) {
+    int u, v;
+    cin >> u >> v;
+    --u; --v;
+    g.add_edge(u, v);
+  }
+
+  g.build(0);
+  int q;
+  cin >> q;
+  while (q--) {
+    int k;
+    cin >> k;
+
+    int deepest = - 1;
+    vector <int> query(k);
+    for (auto &v : query) {
+      cin >> v;
+      v -= 1;
+      if (deepest == -1 || g.depth[v] > g.depth[deepest]) {
+        deepest = v;
+      }
+    }
+
+    bool any = false;
+    int second_deepest = -1;
+    for (auto &v : query) {
+      if (!g.is_ancestor(v, deepest)) {
+        any = true;
+        if (second_deepest == -1 || g.depth[v] > g.depth[second_deepest]) {
+          second_deepest = v;
+        }
+      }
+    }
+
+    if (!any) {
+      cout << "YES\n";
+      continue;
+    }
+
+    bool success = true;
+    int anc = g.lca(deepest, second_deepest);
+    for (auto &v : query) {
+      success &= g.is_ancestor(anc, v);
+      success &= g.is_ancestor(v, deepest) || g.is_ancestor(v, second_deepest);
+    }
+
+    if (success) {
+      cout << "YES\n";
+    } else {
+      cout << "NO\n";
+    }
+  }
+}
+
+int32_t main() {
+  ios::sync_with_stdio(false);
+  cin.tie(0);
+
+  int test_cases = 1;
+  //cin >> test_cases;
+  while (test_cases--) {
+    run_case();
+  }
+
+  return 0;
+}
+//https://codeforces.com/contest/1213/problem/G
