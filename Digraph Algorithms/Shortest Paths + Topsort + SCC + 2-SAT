@@ -1,3 +1,12 @@
+#include <bits/stdc++.h>
+using namespace std;
+
+#ifdef LOCAL
+#include "debug.h"
+#else
+#define debug(...) 42
+#endif
+
 template <typename T>
 class graph {
 public:
@@ -271,4 +280,22 @@ vector <vector <T>> Floyd_Warshall(const vector <vector <T>> &adj_matrix) { // w
     }
   }
   return res;
+}
+
+void run_case() {
+
+}
+
+signed main() {
+  ios::sync_with_stdio(false);
+  cin.tie(0);
+
+  int test_cases = 1;
+  //cin >> test_cases;
+
+  while (test_cases--) {
+    run_case();
+  }
+
+  return 0;
 }
