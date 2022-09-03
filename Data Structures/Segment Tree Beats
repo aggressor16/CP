@@ -1,0 +1,330 @@
+#include <bits/stdc++.h>
+using namespace std;
+
+#ifdef LOCAL
+#include "debug.h"
+#else
+#define debug(...) 42
+#endif
+
+class Segtree_Beats {
+public:
+  static constexpr int64_t INF = 2e18;
+  int n;
+  struct node {
+    int64_t mx = -INF;
+    int64_t mn = INF;
+    int64_t sum = 0;
+    int64_t add = 0;
+    int64_t second_mx = -INF;
+    int64_t second_mn = INF;
+    int cnt_mx = 0;
+    int cnt_mn = 0;
+
+    void apply_min(const int &value, int l, int r) {
+      if (mx > value) {
+        sum += (value - mx) * cnt_mx;
+        mx = value;
+        if (l == r) {
+          mn = mx;
+        } else {
+          if (value <= mn) {
+            mn = value;
+          } else if (value < second_mn) {
+            second_mn = value;
+          }
+        }
+      }
+    }
+
+    void apply_max(const int &value, int l, int r) {
+      if (mn < value) {
+        sum += (value - mn) * cnt_mn;
+        mn = value;
+        if (l == r) {
+          mx = mn;
+        } else {
+          if (value >= mx) {
+            mx = value;
+          } else if (value > second_mx) {
+            second_mx = value;
+          }
+        }
+      }
+    }
+
+    void apply_add(const int &value, int l, int r) {
+      mx += value;
+      mn += value;
+      add += value;
+      sum += value * (r - l + 1);
+      if (second_mx != -INF) {
+        second_mx += value;
+      }
+      if (second_mn != INF) {
+        second_mn += value;
+      }
+    }
+
+    void apply_assign(const int &value, int l, int r) {
+      add = 0;
+      mx = mn = value;
+      sum = value * (r - l + 1);
+      second_mx = -INF;
+      second_mn = INF;
+      cnt_mx = cnt_mn = r - l + 1;
+    }
+  };
+
+  vector <node> tree;
+
+  Segtree_Beats(int _n) : n(_n) {
+    tree.resize(2 * n - 1);
+    build(0, 0, n - 1);
+  }
+
+  template <typename M>
+  Segtree_Beats(const vector <M> &v) {
+    n = (int)v.size();
+    tree.resize(2 * n - 1);
+    build(0, 0, n - 1, v);
+  }
+
+  inline void pull(int x, int z) {
+    tree[x] = unite(tree[x + 1], tree[z]);
+  }
+
+  void push(int x, int l, int r) {
+    int mid = (l + r) >> 1;
+    int z = x + ((mid - l + 1) << 1);
+    if (tree[x].add != 0) {
+      tree[x + 1].apply_add(tree[x].add, l, mid);
+      tree[z].apply_add(tree[x].add, mid + 1, r);
+    }
+    tree[x + 1].apply_max(tree[x].mn, l, mid);
+    tree[z].apply_max(tree[x].mn, mid + 1, r);
+    tree[x + 1].apply_min(tree[x].mx, l, mid);
+    tree[z].apply_min(tree[x].mx, mid + 1, r);
+  }
+
+  node unite(const node &l, const node &r) const {
+    node res;
+    res.sum = l.sum + r.sum;
+    if (l.mx == r.mx) {
+      res.mx = r.mx;
+      res.cnt_mx = l.cnt_mx + r.cnt_mx;
+      res.second_mx = max(l.second_mx, r.second_mx);
+    } else if (l.mx > r.mx) {
+      res.mx = l.mx;
+      res.cnt_mx = l.cnt_mx;
+      res.second_mx = max(l.second_mx, r.mx);
+    } else {
+      res.mx = r.mx;
+      res.cnt_mx = r.cnt_mx;
+      res.second_mx = max(l.mx, r.second_mx);
+    }
+    if (l.mn == r.mn) {
+      res.mn = r.mn;
+      res.cnt_mn = l.cnt_mn + r.cnt_mn;
+      res.second_mn = min(l.second_mn, r.second_mn);
+    } else if (l.mn < r.mn) {
+      res.mn = l.mn;
+      res.cnt_mn = l.cnt_mn;
+      res.second_mn = min(l.second_mn, r.mn);
+    } else {
+      res.mn = r.mn;
+      res.cnt_mn = r.cnt_mn;
+      res.second_mn = min(l.mn, r.second_mn);
+    }
+    return res;
+  }
+
+  template <typename M>
+  void build(int x, int l, int r, const vector <M> &v) {
+    if (l == r) {
+      tree[x].apply_assign(v[l], l, r);
+      return;
+    }
+    int mid = (l + r) >> 1;
+    int z = x + ((mid - l + 1) << 1);
+    build(x + 1, l, mid, v);
+    build(z, mid + 1, r, v);
+    pull(x, z);
+  }
+
+  void build(int x, int l, int r) {
+    if (l == r) {
+      return;
+    }
+    int mid = (l + r) >> 1;
+    int z = x + ((mid - l + 1) << 1);
+    build(x + 1, l, mid);
+    build(z, mid + 1, r);
+    pull(x, z);
+  }
+
+  template <typename M>
+  void modify_min_eq(int x, int l, int r, int ll, int rr, const M &v) {
+    if (tree[x].mx <= v) {
+      return;
+    }
+    if (ll <= l && r <= rr && tree[x].second_mx < v) {
+      tree[x].apply_min(v, l, r);
+      return;
+    }
+    push(x, l, r);
+    int mid = (l + r) >> 1;
+    int z = x + ((mid - l + 1) << 1);
+    if (ll <= mid) {
+      modify_min_eq(x + 1, l, mid, ll, rr, v);
+    }
+    if (rr > mid) {
+      modify_min_eq(z, mid + 1, r, ll, rr, v);
+    }
+    pull(x, z);
+  }
+
+  template <typename M>
+  void modify_max_eq(int x, int l, int r, int ll, int rr, const M &v) {
+    if (v <= tree[x].mn) {
+      return;
+    }
+    if (ll <= l && r <= rr && v < tree[x].second_mn) {
+      tree[x].apply_max(v, l, r);
+      return;
+    }
+    push(x, l, r);
+    int mid = (l + r) >> 1;
+    int z = x + ((mid - l + 1) << 1);
+    if (ll <= mid) {
+      modify_max_eq(x + 1, l, mid, ll, rr, v);
+    }
+    if (rr > mid) {
+      modify_max_eq(z, mid + 1, r, ll, rr, v);
+    }
+    pull(x, z);
+  }
+
+  template <typename M>
+  void modify_add(int x, int l, int r, int ll, int rr, const M &v) {
+    if (ll <= l && r <= rr) {
+      tree[x].apply_add(v, l, r);
+      return;
+    }
+    push(x, l, r);
+    int mid = (l + r) >> 1;
+    int z = x + ((mid - l + 1) << 1);
+    if (ll <= mid) {
+      modify_add(x + 1, l, mid, ll, rr, v);
+    }
+    if (rr > mid) {
+      modify_add(z, mid + 1, r, ll, rr, v);
+    }
+    pull(x, z);
+  }
+
+  template <typename M>
+  void modify_assign(int x, int l, int r, int ll, int rr, const M &v) {
+    if (ll <= l && r <= rr) {
+      tree[x].apply_assign(v, l, r);
+      return;
+    }
+    push(x, l, r);
+    int mid = (l + r) >> 1;
+    int z = x + ((mid - l + 1) << 1);
+    if (ll <= mid) {
+      modify_assign(x + 1, l, mid, ll, rr, v);
+    }
+    if (rr > mid) {
+      modify_assign(z, mid + 1, r, ll, rr, v);
+    }
+    pull(x, z);
+  }
+
+  node get(int x, int l, int r, int ll, int rr) {
+    if (ll <= l && r <= rr) {
+      return tree[x];
+    }
+    push(x, l, r);
+    int mid = (l + r) >> 1;
+    int z = x + ((mid - l + 1) << 1);
+    node res{};
+    if (rr <= mid) {
+      res = get(x + 1, l, mid, ll, rr);
+    } else if (ll > mid) {
+      res = get(z, mid + 1, r, ll, rr);
+    } else {
+      res = unite(get(x + 1, l, mid, ll, rr), get(z, mid + 1, r, ll, rr));
+    }
+    pull(x, z);
+    return res;
+  }
+
+  void modify_min_eq(int l, int r, const int &value) {
+    assert(0 <= l && l <= r && r <= n - 1);
+    modify_min_eq(0, 0, n - 1, l, r, value);
+  }
+
+  void modify_max_eq(int l, int r, const int &value) {
+    assert(0 <= l && l <= r && r <= n - 1);
+    modify_max_eq(0, 0, n - 1, l, r, value);
+  }
+
+  void modify_add(int l, int r, const int &value) {
+    assert(0 <= l && l <= r && r <= n - 1);
+    modify_add(0, 0, n - 1, l, r, value);
+  }
+
+  void modify_assign(int l, int r, const int &value) {
+    assert(0 <= l && l <= r && r <= n - 1);
+    modify_assign(0, 0, n - 1, l, r, value);
+  }
+
+  void modify_min_eq(int p, const int &value) {
+    assert(0 <= p && p <= n - 1);
+    modify_min_eq(0, 0, n - 1, p, p, value);
+  }
+
+  void modify_max_eq(int p, const int &value) {
+    assert(0 <= p && p <= n - 1);
+    modify_max_eq(0, 0, n - 1, p, p, value);
+  }
+
+  void modify_add(int p, const int &value) {
+    assert(0 <= p && p <= n - 1);
+    modify_add(0, 0, n - 1, p, p, value);
+  }
+
+  void modify_assign(int p, const int &value) {
+    assert(0 <= p && p <= n - 1);
+    modify_min_eq(0, 0, n - 1, p, p, value);
+  }
+
+  node get(int l, int r) {
+    assert(0 <= l && l <= r && r <= n - 1);
+    return get(0, 0, n - 1, l, r);
+  }
+
+  node get(int p) {
+    assert(0 <= p && p <= n - 1);
+    return get(0, 0, n - 1, p, p);
+  }
+};
+
+void run_case() {
+  
+}
+
+signed main() {
+  ios::sync_with_stdio(false);
+  cin.tie(0);
+
+  int test_cases = 1;
+  //cin >> test_cases;
+
+  while (test_cases--) {
+    run_case();
+  }
+
+  return 0;
+}
