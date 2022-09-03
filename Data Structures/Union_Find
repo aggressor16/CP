@@ -7,26 +7,35 @@ using namespace std;
 #define debug(...) 42
 #endif
 
+/*Union-Find, or Disjoint Set Union - data structure which allows us, for example, solve the next problem
+Given an undirected graph.
+1) link(u, v) - add an edge between u and v
+2) connected(u, v) - check, whether u and v are connected or not.
+Initially, when graph is empty, there are n vertices, and parent[i] = i
+When linking, we just use the "unite" procedure, and for connectivity checking, we must ensure that leader(u) == leader(v).
+
+Using weight and path compression heuristics, we can reach O(α(n)) time complexity per query on average, when α(n) is inverse Ackermann function.*/
+
 class Dsu {
 public:
   vector <int> parent;
   vector <int> weight;
   int connected_components;
-  
+
   Dsu(int n) {
     parent.resize(n);
     weight.assign(n, 1);
     connected_components = n;
     iota(parent.begin(), parent.end(), 0);
   }
-  
+
   inline int get(int v) {
     if (parent[v] == v) {
       return v;
     }
     return parent[v] = get(parent[v]);
   }
-  
+
   inline void unite(int x, int y) {
     x = get(x);
     y = get(y);
@@ -39,7 +48,7 @@ public:
       connected_components -= 1;
     }
   }
-  
+
   bool connected(int u, int v) {
     return get(u) == get(v);
   }
