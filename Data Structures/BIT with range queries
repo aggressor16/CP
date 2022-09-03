@@ -7,6 +7,8 @@ using namespace std;
 #define debug(...) 42
 #endif
 
+*/Same as usual BIT, but.. allows segment modifications!*/
+
 template <typename T>
 class Fenwick {
 public:
