@@ -45,21 +45,22 @@ public:
   int timer;
   vector <int> tour_start;
   vector <int> tour_end;
-  vector <int> head;
-  vector <int> parent;
-  vector <int> subtree_size;
-  vector <vector <int>> g;
-  Fenwick <long long> tree;
+  vector <int> head; //head of heavy path which starts in vertex v
+  vector <int> parent; //parent in initial tree
+  vector <int> subtree_size; //...
+  vector <vector <int>> adj;
+  Fenwick <long long> tree; //inner data structure(can be replaced with segtree for min(max) etc.)
 
   void dfs(int v, int par) {
     subtree_size[v] = 1;
-    for (int &to : g[v]) {
+    for (int &to : adj[v]) {
       if (to != par) {
         parent[to] = v;
         dfs(to, v);
         subtree_size[v] += subtree_size[to];
-        if (parent[v] == g[v][0] || subtree_size[to] > subtree_size[g[v][0]]) {
-          swap(to, g[v][0]);
+        if (parent[v] == adj[v][0] || subtree_size[to] > subtree_size[adj[v][0]]) { //great trick - we pull the heaviest child to the beginning of the adj
+          //this allows us not to build data structure for every path, moreover, with this implementation we can handle with subtree queries
+          swap(to, adj[v][0]);
         }
       }
     }
@@ -68,7 +69,7 @@ public:
   void decompose(int v, int par) {
     tour_start[v] = timer++;
     bool heavy_child = true;
-    for (int &to : g[v]) {
+    for (int &to : adj[v]) {
       if (to != par) {
         if (heavy_child) {
           head[to] = head[v];
@@ -92,10 +93,10 @@ public:
     return (tour_start[u] < tour_start[v] ? u : v);
   }
 
-  Heavy_Light_Decomposition(const vector <vector <int>> &_g, const vector <int> &_values, int root = 0) {
-    g = _g;
+  Heavy_Light_Decomposition(const vector <vector <int>> &_adj, const vector <int> &_values, int root = 0) {
+    adj = _adj;
     timer = 0;
-    n = (int)g.size();
+    n = (int)adj.size();
     tour_start.resize(n);
     tour_end.resize(n);
     head.resize(n);
@@ -130,7 +131,7 @@ public:
     int anc = lca(u, v);
     modify_straight_path(u, anc, value);
     modify_straight_path(v, anc, value);
-    modify_vertex(anc, -value);
+    modify_vertex(anc, -value); //performing the sum queries, we must rollback lca
   }
 
   void modify_subtree(int v, const int &value) {
@@ -173,15 +174,15 @@ void run_case() {
     cin >> v;
   }
 
-  vector <vector <int>> g(n);
+  vector <vector <int>> adj(n);
   for (int i = 1; i < n; ++i) {
     int u, v;
     cin >> u >> v;
-    g[u].push_back(v);
-    g[v].push_back(u);
+    adj[u].push_back(v);
+    adj[v].push_back(u);
   }
 
-  Heavy_Light_Decomposition HLD(g, values);
+  Heavy_Light_Decomposition HLD(adj, values);
   while (q--) {
     int t, u, v;
     cin >> t >> u >> v;
