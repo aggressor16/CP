@@ -21,6 +21,9 @@ T inverse(T a, T m) {
   return u;
 }
 
+/*The fastest way to get leat divisor of each number in range [1..n). The arbitraty number x is prime if and only if least_divisor[x] == x.
+Factorization, obviously, runs in O(log(x)).*/
+
 vector <int> primes;
 vector <int> least_divisor;
 
