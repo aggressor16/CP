@@ -1,3 +1,15 @@
+#include <bits/stdc++.h>
+using namespace std;
+
+#ifdef LOCAL
+#include "debug.h"
+#else
+#define debug(...) 42
+#endif
+
+/*Same as implicit treap, we can do a lot of interesting things....
+But it should be noticed, this is the only implicit tree to achieve O(log(n)) complexity if it is used in Link-Cut Tree.*/
+
 class Splay_Tree {
 public:
   struct node {
@@ -194,16 +206,35 @@ public:
       insert_back(this->root, new node(x));
     }
   }
-  
+
   void print_in_order() {
     print_in_order(this->root);
   }
-  
+
   node* cut(int l, int r) {
     return cut(this->root, l, r);
   }
-  
+
   void insert_after(int pos, node *x) {
     insert_after(root, pos, x);
   }
 };
+
+
+void run_case() {
+
+}
+
+signed main() {
+  ios::sync_with_stdio(false);
+  cin.tie(0);
+
+  int test_cases = 1;
+  //cin >> test_cases;
+
+  while (test_cases--) {
+    run_case();
+  }
+
+  return 0;
+}
