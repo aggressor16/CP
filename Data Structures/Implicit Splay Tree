@@ -1,0 +1,209 @@
+class Splay_Tree {
+public:
+  struct node {
+    int size = 1;
+    int value = 0;
+    bool reversed = false;
+    node* left = nullptr;
+    node* right = nullptr;
+    node* parent = nullptr;
+
+    node(int _value) : value(_value) {
+    }
+
+    void push() {
+      if (this->reversed) {
+        swap(this->left, this->right);
+        if (this->left != nullptr) {
+          this->left->reversed ^= 1;
+        }
+        if (this->right != nullptr) {
+          this->right->reversed ^= 1;
+        }
+        this->reversed = 0;
+      }
+    }
+
+    void update() {
+      this->size = 1;
+      if (this->left != nullptr) {
+        this->size += this->left->size;
+      }
+      if (this->right != nullptr) {
+        this->size += this->right->size;
+      }
+    }
+
+    void rotate() {
+      node* par = this->parent;
+      node* g = par->parent;
+      if (g != nullptr) {
+        if (g->right == par) {
+          g->right = this;
+        } else {
+          g->left = this;
+        }
+      }
+      par->push();
+      this->push();
+      if (par->left == this) {
+        par->left = this->right;
+        this->right = par;
+        if (par->left != nullptr) {
+          par->left->parent = par;
+        }
+      } else {
+        par->right = this->left;
+        this->left = par;
+        if (par->right != nullptr) {
+          par->right->parent = par;
+        }
+      }
+      par->parent = this;
+      this->parent = g;
+      par->update();
+      this->update();
+      if (g != nullptr) {
+        g->update();
+      }
+    }
+
+    void splay() {
+      while (this->parent != nullptr) {
+        node* par = this->parent;
+        node* g = par->parent;
+        if (g != nullptr) {
+          g->push();
+          if ((g->right == par) == (par->right == this)) {
+            par->rotate();
+          } else {
+            this->rotate();
+          }
+        }
+        this->rotate();
+      }
+      this->push();
+    }
+  };
+
+  node* find(node *v, int k) { //kth element
+    if (v == nullptr) {
+      return v;
+    }
+    v->push();
+    int left_sz = (v->left == nullptr ? 0 : v->left->size);
+    while (left_sz + 1 != k) {
+      if (k <= left_sz) {
+        if (v->left == nullptr) {
+          break;
+        }
+        v = v->left;
+      } else {
+        if (v->right == nullptr) {
+          break;
+        }
+        v = v->right;
+        k -= left_sz + 1;
+      }
+      v->push();
+      left_sz = (v->left == nullptr ? 0 : v->left->size);
+    }
+    v->splay();
+    return v;
+  }
+
+  node* merge(node *l, node *r) {
+    if (l == nullptr) {
+      return r;
+    }
+    if (r == nullptr) {
+      return l;
+    }
+    l->push();
+    r->push();
+    while (l->right != nullptr) {
+      l = l->right;
+      l->push();
+    }
+    l->splay();
+    l->right = r;
+    r->parent = l;
+    l->update();
+    return l;
+  }
+
+  pair <node*, node*> split(node *v, int x) {
+    if (v == nullptr) {
+      return make_pair(nullptr, nullptr);
+    }
+    v->push();
+    if (x > v->size) {
+      return make_pair(root, nullptr);
+    }
+    v = find(v, x);
+    node* L = v->left;
+    node* R = v;
+    if (L != nullptr) {
+      L->update();
+      L->parent = nullptr;
+    }
+    R->left = nullptr;
+    R->update();
+    return make_pair(L, R);
+  }
+
+  void insert_back(node *&v, node *x) {
+    v = merge(v, x);
+  }
+
+  void insert_after(node *&v, int pos, node *x) {
+    auto [L, R] = split(v, pos + 1);
+    v = merge(merge(L, x), R);
+  }
+
+  node* cut(node *&v, int l, int r) {
+    auto [Mid, R] = split(v, r + 1);
+    auto [L, res] = split(Mid, l);
+    v = merge(L, R);
+    return res;
+  }
+
+  void print_in_order(node *&v) {
+    v->push();
+    if (v->left != nullptr) {
+      print_in_order(v->left);
+    }
+    cout << v->value << " ";
+    if (v->right != nullptr) {
+      print_in_order(v->right);
+    }
+  }
+
+  node* root = nullptr;
+  Splay_Tree() {
+  }
+
+  Splay_Tree(int n) {
+    for (int i = 1; i <= n; ++i) {
+      insert_back(this->root, new node(i));
+    }
+  }
+
+  Splay_Tree(const vector <int> &_values) {
+    for (auto &x : _values) {
+      insert_back(this->root, new node(x));
+    }
+  }
+  
+  void print_in_order() {
+    print_in_order(this->root);
+  }
+  
+  node* cut(int l, int r) {
+    return cut(this->root, l, r);
+  }
+  
+  void insert_after(int pos, node *x) {
+    insert_after(root, pos, x);
+  }
+};
