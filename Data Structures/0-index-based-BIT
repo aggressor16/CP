@@ -1,0 +1,58 @@
+#include <bits/stdc++.h>
+using namespace std;
+
+#ifdef LOCAL
+#include "debug.h"
+#else
+#define debug(...) 42
+#endif
+
+template <typename T>
+class Fenwick {
+  public:
+  int n;
+  vector <T> tree;
+
+  Fenwick() = default;
+  explicit Fenwick(int _n) : n(_n) {
+    tree.assign(n, 0);
+  }
+
+  void modify(int p, int v) {
+    while (p < n) {
+      tree[p] += v;
+      p |= p + 1;
+    }
+  }
+
+  T get(int p) {
+    T res{};
+    while (p >= 0) {
+      res += tree[p];
+      p = (p & (p + 1)) - 1;
+    }
+    return res;
+  }
+
+  T get(int l, int r) {
+    return get(r) - get(l - 1);
+  }
+};
+
+void run_case() {
+
+}
+
+signed main() {
+  ios::sync_with_stdio(false);
+  cin.tie(0);
+
+  int test_cases = 1;
+  //cin >> test_cases;
+
+  while (test_cases--) {
+    run_case();
+  }
+
+  return 0;
+}
