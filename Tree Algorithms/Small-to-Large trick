@@ -1,0 +1,95 @@
+#include <bits/stdc++.h>
+using namespace std;
+
+#ifdef LOCAL
+#include "debug.h"
+#else
+#define debug(...) 42
+#endif
+
+struct custom_hash {
+  static uint64_t splitmix64(uint64_t x) {
+    x += 0x9e3779b97f4a7c15;
+    x = (x ^ (x >> 30)) * 0xbf58476d1ce4e5b9;
+    x = (x ^ (x >> 27)) * 0x94d049bb133111eb;
+    return x ^ (x >> 31);
+  }
+
+  size_t operator()(uint64_t x) const {
+    static const uint64_t FIXED_RANDOM = chrono::steady_clock::now().time_since_epoch().count();
+    return splitmix64(x + FIXED_RANDOM);
+  }
+};
+
+constexpr int N = 1e6 + 10;
+
+int ans[N];
+int color[N];
+int parent[N];
+int subtree_size[N];
+vector <int> adj[N];
+unordered_set <int, custom_hash> cnt[N];
+
+void size_dfs(int v) {
+  subtree_size[v] = 1;
+  for (int &to : adj[v]) {
+    if (to != parent[v]) {
+      size_dfs(to);
+      subtree_size[v] += subtree_size[to];
+      if (adj[v][0] == parent[v] || subtree_size[to] > subtree_size[adj[v][0]]) {
+        swap(to, adj[v][0]);
+      }
+    }
+  }
+}
+
+void dfs(int v) {
+  bool heavy = true;
+  for (int to : adj[v]) {
+    if (to != parent[v]) {
+      dfs(to);
+      if (heavy) {
+        heavy = false;
+        cnt[v].swap(cnt[to]);
+      }
+      for (int c : cnt[to]) {
+        cnt[v].insert(c);
+      }
+    }
+  }
+  cnt[v].insert(color[v]);
+  ans[v] = (int)cnt[v].size();
+}
+
+void run_case() {
+  int n;
+  cin >> n;
+
+  int root = -1;
+  for (int i = 0; i < n; ++i) {
+    cin >> parent[i] >> color[i];
+    --parent[i]; --color[i];
+    if (parent[i] == -1) {
+      root = i;
+    } else {
+      adj[i].push_back(parent[i]);
+      adj[parent[i]].push_back(i);
+    }
+  }
+
+  size_dfs(root);
+  dfs(root);
+  for (int i = 0; i < n; ++i) {
+    cout << ans[i] << " \n"[i == n - 1];
+  }
+}
+
+int32_t main() {
+  ios::sync_with_stdio(false);
+  cin.tie(0);
+  int test_cases = 1;
+  //cin >> test_cases;
+  while (test_cases--) {
+    run_case();
+  }
+}
