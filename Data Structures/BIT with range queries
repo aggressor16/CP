@@ -1,0 +1,70 @@
+#include <bits/stdc++.h>
+using namespace std;
+
+#ifdef LOCAL
+#include "debug.h"
+#else
+#define debug(...) 42
+#endif
+
+template <typename T>
+class Fenwick {
+public:
+  int n;
+  vector <T> t_add;
+  vector <T> t_mul;
+
+  explicit Fenwick(int _n) : n(_n) {
+    t_add.resize(n, 0);
+    t_mul.resize(n, 0);
+  }
+
+  void modify(int l, int r, const T &v) {
+    modify(l, v, -v * (l - 1));
+    modify(r, -v, v * r);
+  }
+
+  T get(int p) {
+    T res{};
+    T add = 0;
+    T mul = 0;
+    int start = p;
+    while (p >= 0) {
+      add += t_add[p];
+      mul += t_mul[p];
+      p = (p & (p + 1)) - 1;
+    }
+    return mul * start + add;
+  }
+
+  T get(int l, int r) {
+    return get(r) - get(l - 1);
+  }
+
+private:
+  void modify(int p, T mul, T add) {
+    while (p < n) {
+      t_add[p] += add;
+      t_mul[p] += mul;
+      p |= p + 1;
+    }
+  }
+};
+
+void run_case() {
+
+}
+
+signed main() {
+  ios::sync_with_stdio(false);
+  cin.tie(0);
+
+  int test_cases = 1;
+  //cin >> test_cases;
+
+  while (test_cases--) {
+    run_case();
+  }
+
+  return 0;
+}
