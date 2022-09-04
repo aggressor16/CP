@@ -8,6 +8,7 @@ using namespace std;
 #endif
 
 /*mod is a random prime number >= 1e9)
+  modulo must be quite big (birthday problem)
   we build hash in linear time, and after that we can compare two different substrings in O(1),
   since mod and coeff are the same for all strings we encrypt.
   Note: coeff must be greater than the alphabet size(otherwise, there is the root of polynome).
