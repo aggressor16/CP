@@ -1,0 +1,77 @@
+#include <bits/stdc++.h>
+using namespace std;
+
+#ifdef LOCAL
+#include "debug.h"
+#else
+#define debug(...) 42
+#endif
+
+/* Prefix function is a length of longest prefix of string which is also suffix of it.
+Quite similar to Z-function. p[i] denotes prefix function for prefix of S of length[i].
+Time complexity - O(|S| + |T|) for searching and O(|S|) for calculating prefix function.*/
+
+vector <int> prefix_function(const string &s) {
+  int n = (int)s.size();
+  vector <int> p(n);
+  int j = 0;
+  for (int i = 1; i < n; ++i) {
+    j = p[i - 1];
+    while (j >= 0 && s[i] != s[j]) {
+      if (j > 0) {
+        j = p[j - 1];
+      } else {
+        j -= 1;
+      }
+    }
+    p[i] = ++j;
+  }
+  return p;
+}
+
+vector <int> Knuth_Morris_Pratt(const string &t, const string &s) {
+  int n = (int)t.size();
+  int m = (int)s.size();
+  string new_t = s + "#" + t;
+  vector <int> p = prefix_function(new_t);
+
+  vector <int> res;
+  for (int i = 0; i < n; ++i) {
+    if (p[i + m + 1] == m) {
+      res.push_back(i + 1 - m);
+    }
+  }
+
+  return res;
+}
+
+void run_case() {
+  string s;
+  string t;
+  cin >> s >> t;
+  
+  vector <int> res = Knuth_Morris_Pratt(t, s);
+  cout << (int)res.size() << "\n";
+  for (int &index : res) {
+    cout << index + 1 << " ";
+  }
+  
+  /*s == aba
+    t == abacaba
+    2
+    1 5 */
+}
+
+signed main() {
+  ios::sync_with_stdio(false);
+  cin.tie(0);
+
+  int test_cases = 1;
+  //cin >> test_cases;
+
+  while (test_cases--) {
+    run_case();
+  }
+
+  return 0;
+}
