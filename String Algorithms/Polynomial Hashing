@@ -1,0 +1,103 @@
+#include <bits/stdc++.h>
+using namespace std;
+
+#ifdef LOCAL
+#include "debug.h"
+#else
+#define debug(...) 42
+#endif
+
+/*mod is a random prime number >= 1e9)
+  we build hash in linear time, and after that we can compare two different substrings in O(1),
+  since mod and coeff are the same for all strings we encrypt.
+  Note: coeff must be greater than the alphabet size(otherwise, there is the root of polynome).
+  Note: instead of multiplying by powers[precalculated - l], we could have taken modular inverses(since modulo is prime),
+  but i don't know how to do this without additional O(log(mod)).
+*/
+
+mt19937 rnd(chrono::steady_clock::now().time_since_epoch().count());
+constexpr bool is_prime(long long number) {
+  for (long long i = 2; i * i <= number; ++i) {
+    if (number % i == 0) {
+      return false;
+    }
+  }
+  return true;
+}
+
+long long generate_mod() {
+  long long res = 1000000000 + rnd() % (1000000000);
+  while (!is_prime(res)) {
+    res += 1;
+  }
+  return res;
+}
+
+const long long mod = generate_mod();
+const long long coeff = (1 << 25) + rnd() % (1 << 25);
+vector <long long> powers = {1};
+int precalculated = 0;
+
+class Poly_Hash {
+public:
+  vector <long long> hash;
+
+  Poly_Hash() = default;
+  Poly_Hash(const string &s) {
+    int n = (int)s.size();
+    while (precalculated <= n) {
+      precalculated += 1;
+      powers.push_back((powers.back() * coeff) % mod);
+    }
+    hash.resize(n + 1);
+    for (int i = 1; i <= n; ++i) {
+      hash[i] = hash[i - 1];
+      hash[i] += (powers[i] * s[i - 1]) % mod;
+      if (hash[i] >= mod) {
+        hash[i] -= mod;
+      }
+    }
+  }
+
+  long long get_substring(int l, int r) {
+    assert(0 <= l && l <= r && r + 1 < (int)hash.size());
+    long long res = hash[r + 1] - hash[l];
+    if (res < 0) {
+      res += mod;
+    }
+    return (res * powers[precalculated - l]) % mod;
+  }
+};
+
+void run_case() {
+  string s;
+  cin >> s;
+
+  Poly_Hash H(s);
+  int q;
+  cin >> q;
+  while (q--) {
+    int a, b, c, d;
+    cin >> a >> b >> c >> d;
+    --a; --b; --c; --d;
+    if (H.get_substring(a, b) == H.get_substring(c, d)) {
+      cout << "Yes\n";
+    } else {
+      cout << "No\n";
+    }
+  }
+}
+
+signed main() {
+  ios::sync_with_stdio(false);
+  cin.tie(0);
+
+  int test_cases = 1;
+  //cin >> test_cases;
+
+  while (test_cases--) {
+    run_case();
+  }
+
+  return 0;
+}
