@@ -1,0 +1,166 @@
+#include <bits/stdc++.h>
+using namespace std;
+
+#ifdef LOCAL
+#include "debug.h"
+#else
+#define debug(...) 42
+#endif
+
+template <const int alphabet = 26>
+class Aho_Corasick {
+public:
+  struct node {
+    int occurences = 0;
+    int parent_char = -1;
+    bool terminal = false;
+    node* parent = nullptr;
+    node* suffix_link = nullptr;
+    node* next[alphabet] = {nullptr};
+    vector <node*> incoming_suffix_links = {};
+
+    int left_occurence = numeric_limits <int>::max();
+    int right_occurence = numeric_limits <int>::min();
+
+    node(node* p, int par_char) {
+      this->parent = p;
+      this->parent_char = par_char;
+    }
+  };
+
+  node* root = new node(nullptr, -1);
+  node* current_state = root;
+
+  vector <string> dictionary;
+  vector <node*> terminal_nodes;
+
+  Aho_Corasick(const vector <string> &_dictionary = {}) {
+    if (!_dictionary.empty()) {
+      build(_dictionary);
+    }
+  }
+
+  void build(const vector <string> &_dictionary) {
+    dictionary = _dictionary;
+    terminal_nodes.reserve((int)dictionary.size());
+
+    for (auto &s : dictionary) {
+      this->insert(s);
+    }
+
+    queue <node*> q;
+    q.push(this->root);
+
+    while (!q.empty()) {
+      node* v = q.front();
+      q.pop();
+
+      for (auto &next_node : v->next) {
+        if (next_node != nullptr) {
+          q.push(next_node);
+          find_suffix_link(next_node);
+          next_node->suffix_link->incoming_suffix_links.push_back(next_node);
+        }
+      }
+    }
+  }
+
+  void insert(const string &s) {
+    node* current_node = this->root;
+    for (auto &c : s) {
+      if (current_node->next[c - 'a'] == nullptr) { //depends on alphabet
+        current_node->next[c - 'a'] = new node(current_node, c - 'a');
+      }
+      current_node = current_node->next[c - 'a'];
+    }
+    current_node->terminal = true;
+    terminal_nodes.push_back(current_node);
+  }
+
+  void find_suffix_link(node *v) {
+    node* p = v->parent->suffix_link;
+    while (p != nullptr) {
+      if (p->next[v->parent_char] != nullptr) {
+        v->suffix_link = p->next[v->parent_char];
+        return;
+      }
+      p = p->suffix_link;
+    }
+    v->suffix_link = root;
+  }
+
+  void move(int next_char) {
+    if (current_state->next[next_char] != nullptr) {
+      current_state = current_state->next[next_char];
+      return;
+    }
+    while (current_state->suffix_link != nullptr) {
+      current_state = current_state->suffix_link;
+      if (current_state->next[next_char] != nullptr) {
+        current_state = current_state->next[next_char];
+        break;
+      }
+    }
+  }
+
+  void dfs(node* v) {
+    for (node* child : v->incoming_suffix_links) {
+      dfs(child);
+      v->occurences += child->occurences;
+      v->left_occurence = min(v->left_occurence, child->left_occurence);
+      v->right_occurence = max(v->right_occurence, child->right_occurence);
+    }
+  }
+
+  void process(const string &text) {
+    int timer = 0;
+    for (auto &_char_ : text) {
+      this->move(_char_ - 'a');
+      current_state->occurences += 1;
+      current_state->left_occurence = min(current_state->left_occurence, timer);
+      current_state->right_occurence = max(current_state->right_occurence, timer);
+      timer += 1;
+    }
+    this->dfs(this->root);
+  }
+};
+
+void run_case() {
+  int n;
+  cin >> n;
+
+  vector <string> dictionary(n);
+  for (auto &s : dictionary) {
+    cin >> s;
+  }
+
+  string text;
+  cin >> text;
+
+  Aho_Corasick <26> Aho(dictionary);
+  Aho.process(text);
+
+  for (int i = 0; i < n; ++i) {
+    auto &_node_ = Aho.terminal_nodes[i];
+    if (_node_->left_occurence == numeric_limits <int>::max()) {
+      cout << "-1 -1\n";
+    } else {
+      cout << _node_->left_occurence - (int)dictionary[i].size() + 1 << " ";
+      cout << _node_->right_occurence - (int)dictionary[i].size() + 1 << "\n";
+    }
+  }
+}
+
+signed main() {
+  ios::sync_with_stdio(false);
+  cin.tie(0);
+
+  int test_cases = 1;
+  //cin >> test_cases;
+
+  while (test_cases--) {
+    run_case();
+  }
+
+  return 0;
+}
