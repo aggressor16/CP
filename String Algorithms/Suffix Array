@@ -16,6 +16,8 @@ public:
   vector <int> order;
   vector <int> class_id;
 
+  static constexpr int LOWER = 97; //'a';
+
   Suffix_Array(const string &_s = "") {
     if (_s != "") {
       build(_s);
@@ -23,89 +25,92 @@ public:
   }
 
   inline int index(const char &X) {
-    return X - 32;
+    return X - LOWER;
   }
 
   void build(const string &_s) {
     s = _s;
     if (separator) {
-      s.push_back('$');
+      for (auto &x : s) {
+        x += 1;
+      }
+      s.push_back(LOWER);
     }
     n = (int)s.size();
-    order.assign(n, 0);
-    class_id.assign(n, 0);
+    order.resize(n);
+    class_id.resize(n);
 
-    if (separator) {
-      order[0] = n - 1;
-      class_id[n - 1] = 0;
+    int cnt_size = max(n, alphabet + separator);
+
+    vector <int> cnt(cnt_size);
+    for (int i = 0; i < n; ++i) {
+      cnt[index(s[i])] += 1;
     }
 
-
-    vector <vector <int>> cnt(alphabet);
-    for (int i = 0; i < n - separator; ++i) {
-      cnt[index(s[i])].push_back(i);
+    for (int i = 1; i < cnt_size; ++i) {
+      cnt[i] += cnt[i - 1];
     }
 
-    int pos = separator;
-    int id_count = separator;
-    for (int i = 0; i < alphabet; ++i) {
-      if (cnt[i].empty()) {
-        continue;
+    for (int i = 0; i < n; ++i) {
+      order[cnt[index(s[i])] -= 1] = i;
+    }
+
+    class_id[order[0]] = 0;
+    int classes_count = 1;
+    for (int i = 1; i < n; ++i) {
+      if (s[order[i]] != s[order[i - 1]]) {
+        classes_count += 1;
       }
-      for (auto &index : cnt[i]) {
-        order[pos] = index;
-        class_id[index] = id_count;
-        pos += 1;
-      }
-      id_count += 1;
+      class_id[order[i]] = classes_count - 1;
     }
 
     int length = 1;
+    vector <int> new_order(n);
+    vector <int> new_class_id(n);
+
     while (length < n) {
-      cnt.assign(id_count, {});
-      vector <int> new_class_id(n);
-
-      pos = 0;
-      int new_id_count = 0;
-
       for (int i = 0; i < n; ++i) {
-        int k = order[i] - length + n;
-        if (n <= k) {
-          k -= n;
+        new_order[i] = order[i] - length;
+        if (new_order[i] < 0) {
+          new_order[i] += n;
         }
-        cnt[class_id[k]].push_back(k);
       }
 
-      for (int i = 0; i < id_count; ++i) {
-        for (int j = 0; j < (int)cnt[i].size(); ++j) {
-          if (j == 0) {
-            new_id_count += 1;
-          } else {
-            int a = cnt[i][j] + length;
-            int b = cnt[i][j - 1] + length;
-            if (a >= n) {
-              a -= n;
-            }
-            if (b >= n) {
-              b -= n;
-            }
-            if (class_id[a] != class_id[b]) {
-              new_id_count += 1;
-            }
-          }
-          order[pos++] = cnt[i][j];
-          new_class_id[cnt[i][j]] = new_id_count - 1;
+      fill(cnt.begin(), cnt.begin() + classes_count, 0);
+      for (int i = 0; i < n; ++i) {
+        cnt[class_id[new_order[i]]] += 1;
+      }
+      for (int i = 1; i < classes_count; ++i) {
+        cnt[i] += cnt[i - 1];
+      }
+      for (int i = n - 1; i >= 0; --i) {
+        order[cnt[class_id[new_order[i]]] -= 1] = new_order[i];
+      }
+
+      new_class_id[order[0]] = 0;
+      classes_count = 1;
+      for (int i = 1; i < n; ++i) {
+        int middle_1 = order[i] + length;
+        int middle_2 = order[i - 1] + length;
+        if (n <= middle_1) {
+          middle_1 -= n;
         }
+        if (n <= middle_2) {
+          middle_2 -= n;
+        }
+        if (class_id[order[i]] != class_id[order[i - 1]]
+            || class_id[middle_1] != class_id[middle_2]) {
+          classes_count += 1;
+        }
+        new_class_id[order[i]] = classes_count - 1;
       }
 
       length <<= 1;
-      id_count = new_id_count;
-      class_id.swap(new_class_id);
+      copy(new_class_id.begin(), new_class_id.end(), class_id.begin());
     }
 
     if (separator) {
       n -= 1;
-      s.pop_back();
       class_id.pop_back();
       order.erase(order.begin());
     }
@@ -132,31 +137,27 @@ public:
         lcp[p] = LCP;
       }
     }
+
+    for (int i = 0; i < n - 1; ++i) {
+      lcp[i] = min(lcp[i], n - max(order[i], order[i + 1]));
+    }
   }
 };
 
 void run_case() {
-  int k;
   string s;
-  cin >> s >> k;
+  cin >> s;
 
   int n = (int)s.size();
-  Suffix_Array <95, 0> SA(s);
+  Suffix_Array S(s);
+  S.build_lcp();
 
-  int res = -1;
-  for (int i = 0; i < n; ++i) {
-    if (SA.class_id[i] == k - 1) {
-      res = i;
-    }
+  long long ans = n - S.order[0];
+  for (int i = 1; i < n; ++i) {
+    ans += n - S.order[i] - S.lcp[i - 1];
   }
 
-  if (res == -1) {
-    cout << "IMPOSSIBLE\n";
-  } else {
-    for (int i = 0; i < n; ++i) {
-      cout << s[(i + res) % n];
-    }
-  }
+  cout << ans << "\n";
 }
 
 int32_t main() {
