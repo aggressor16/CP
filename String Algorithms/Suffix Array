@@ -1,0 +1,173 @@
+#include <bits/stdc++.h>
+using namespace std;
+
+#ifdef LOCAL
+#include "debug.h"
+#else
+#define debug(...) 42
+#endif
+
+template <const int alphabet = 26, bool separator = true>
+class Suffix_Array {
+public:
+  int n;
+  string s;
+  vector <int> lcp;
+  vector <int> order;
+  vector <int> class_id;
+
+  Suffix_Array(const string &_s = "") {
+    if (_s != "") {
+      build(_s);
+    }
+  }
+
+  inline int index(const char &X) {
+    return X - 32;
+  }
+
+  void build(const string &_s) {
+    s = _s;
+    if (separator) {
+      s.push_back('$');
+    }
+    n = (int)s.size();
+    order.assign(n, 0);
+    class_id.assign(n, 0);
+
+    if (separator) {
+      order[0] = n - 1;
+      class_id[n - 1] = 0;
+    }
+
+
+    vector <vector <int>> cnt(alphabet);
+    for (int i = 0; i < n - separator; ++i) {
+      cnt[index(s[i])].push_back(i);
+    }
+
+    int pos = separator;
+    int id_count = separator;
+    for (int i = 0; i < alphabet; ++i) {
+      if (cnt[i].empty()) {
+        continue;
+      }
+      for (auto &index : cnt[i]) {
+        order[pos] = index;
+        class_id[index] = id_count;
+        pos += 1;
+      }
+      id_count += 1;
+    }
+
+    int length = 1;
+    while (length < n) {
+      cnt.assign(id_count, {});
+      vector <int> new_class_id(n);
+
+      pos = 0;
+      int new_id_count = 0;
+
+      for (int i = 0; i < n; ++i) {
+        int k = order[i] - length + n;
+        if (n <= k) {
+          k -= n;
+        }
+        cnt[class_id[k]].push_back(k);
+      }
+
+      for (int i = 0; i < id_count; ++i) {
+        for (int j = 0; j < (int)cnt[i].size(); ++j) {
+          if (j == 0) {
+            new_id_count += 1;
+          } else {
+            int a = cnt[i][j] + length;
+            int b = cnt[i][j - 1] + length;
+            if (a >= n) {
+              a -= n;
+            }
+            if (b >= n) {
+              b -= n;
+            }
+            if (class_id[a] != class_id[b]) {
+              new_id_count += 1;
+            }
+          }
+          order[pos++] = cnt[i][j];
+          new_class_id[cnt[i][j]] = new_id_count - 1;
+        }
+      }
+
+      length <<= 1;
+      id_count = new_id_count;
+      class_id.swap(new_class_id);
+    }
+
+    if (separator) {
+      n -= 1;
+      s.pop_back();
+      class_id.pop_back();
+      order.erase(order.begin());
+    }
+  }
+
+  void build_lcp() {
+    lcp.resize(n);
+    vector <int> rev_order(n);
+    for (int i = 0; i < n; ++i) {
+      rev_order[order[i]] = i;
+    }
+
+    int LCP = 0;
+    for (int i = 0; i < n; ++i) {
+      int p = rev_order[i];
+      if (p == n - 1) {
+        lcp[p] = LCP = 0;
+      } else {
+        int q = order[p + 1];
+        LCP = max(LCP - 1, 0);
+        while (i + LCP < n && q + LCP < n && s[i + LCP] == s[q + LCP]) {
+          LCP += 1;
+        }
+        lcp[p] = LCP;
+      }
+    }
+  }
+};
+
+void run_case() {
+  int k;
+  string s;
+  cin >> s >> k;
+
+  int n = (int)s.size();
+  Suffix_Array <95, 0> SA(s);
+
+  int res = -1;
+  for (int i = 0; i < n; ++i) {
+    if (SA.class_id[i] == k - 1) {
+      res = i;
+    }
+  }
+
+  if (res == -1) {
+    cout << "IMPOSSIBLE\n";
+  } else {
+    for (int i = 0; i < n; ++i) {
+      cout << s[(i + res) % n];
+    }
+  }
+}
+
+int32_t main() {
+  ios::sync_with_stdio(false);
+  cin.tie(0);
+
+  int test_cases = 1;
+  //cin >> test_cases;
+  while (test_cases--) {
+    run_case();
+  }
+
+  return 0;
+}
