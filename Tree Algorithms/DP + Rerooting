@@ -1,0 +1,77 @@
+#include <bits/stdc++.h>
+
+//https://codeforces.com/contest/1092/problem/F
+ 
+void solve() {
+  int n;
+  std::cin >> n;
+ 
+  std::vector <int> values(n);
+  for (auto &x : values) {
+    std::cin >> x;
+  }
+ 
+  if (n == 1) {
+    std::cout << "0\n";
+    return;
+  }
+ 
+  std::vector <std::vector <int>> adj(n);
+  for (int i = 1; i < n; ++i) {
+    int u, v;
+    std::cin >> u >> v;
+    --u; --v;
+    adj[u].push_back(v);
+    adj[v].push_back(u);
+  }
+ 
+  std::vector <int64_t> dp(n);
+  std::vector <int64_t> dp_roots(n);
+  std::vector <int64_t> subtree_sum(n);
+  auto dfs_1 = [&](const auto &self, int v, int par, int depth) -> void {
+    dp[v] = depth * 1LL * values[v];
+    subtree_sum[v] = values[v];
+    for (int to : adj[v]) {
+      if (to != par) {
+        self(self, to, v, depth + 1);
+        dp[v] += dp[to];
+        subtree_sum[v] += subtree_sum[to];
+      }
+    }
+  };
+ 
+  auto reroot = [&](int old_root, int new_root) {
+    subtree_sum[old_root] -= subtree_sum[new_root];
+    dp[old_root] -= dp[new_root];
+    dp[new_root] += dp[old_root];
+    dp[new_root] -= subtree_sum[new_root];
+    dp[new_root] += subtree_sum[old_root];
+    subtree_sum[new_root] += subtree_sum[old_root];
+  };
+ 
+  dfs_1(dfs_1, 0, -1, 0);
+  auto dfs_2 = [&](const auto &self, int v, int par) -> void {
+    dp_roots[v] = dp[v];
+    for (int to : adj[v]) {
+      if (to != par) {
+        reroot(v, to);
+        self(self, to, v);
+        reroot(to, v);
+      }
+    }
+  };
+ 
+  dfs_2(dfs_2, 0, -1);
+  std::cout << std::ranges::max(dp_roots) << "\n";
+}
+ 
+int main() {
+  std::ios::sync_with_stdio(false);
+  std::cin.tie(nullptr);
+  int tt = 1;
+  //std::cin >> tt;
+  while (tt--) {
+    solve();
+  }
+  return 0;
+}
