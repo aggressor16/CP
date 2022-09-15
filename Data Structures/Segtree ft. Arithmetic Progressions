@@ -1,58 +1,46 @@
 #include <bits/stdc++.h>
 
-class Node {
+class Segtree {
 public:
-  int64_t sum = 0;
-  Node(int64_t s = 0) : sum(s){};
+  struct node {
+    int64_t sum = 0;
+    int64_t a = 0;
+    int64_t d = 0;
 
-  friend Node operator + (const Node &lhs, const Node &rhs) {
-    return Node(lhs.sum + rhs.sum);
-  }
-};
+    void apply(int l, int r, const int64_t &A, const int64_t &D, int shift) {
+      a += A + D * shift;
+      d += D;
+      sum += ((2 * (A + D * shift) + D * (r - l)) * (r - l + 1)) >> 1;
+    }
+  };
 
-void apply(Node &v, const std::pair <int64_t, int64_t> &T, int l, int r) {
-  v.sum += ((2 * T.first + T.second * (r - l)) * (r - l + 1)) >> 1;
-}
-
-void apply(std::pair <int64_t, int64_t> &lhs, const std::pair <int64_t, int64_t> &rhs) {
-  lhs.first += rhs.first;
-  lhs.second += rhs.second;
-}
-
-template <class Node, class Tag = int>
-class Lazy_Segtree {
-public:
   int n;
-  std::vector <Tag> tag;
-  std::vector <Node> tree;
-
-  void apply(int x, int l, int r, const Tag &T) {
-    ::apply(tag[x], T);
-    ::apply(tree[x], T, l, r);
-  }
+  std::vector <node> tree;
 
   void push(int x, int l, int r) {
-    if (tag[x] != Tag()) {
+    if (tree[x].a != 0 || tree[x].d != 0) {
       int mid = (l + r) >> 1;
       int z = x + ((mid - l + 1) << 1);
-
-      Tag left, right;
-      left = right = tag[x];
-      right.first += tag[x].second * (mid + 1 - l);
-
-      apply(x + 1, l, mid, left);
-      apply(z, mid + 1, r, right);
-      tag[x] = Tag();
+      tree[x + 1].apply(l, mid, tree[x].a, tree[x].d, 0);
+      tree[z].apply(mid + 1, r, tree[x].a, tree[x].d, mid + 1 - l);
+      tree[x].a = tree[x].d = 0;
     }
   }
 
   inline void pull(int x, int z) {
-    tree[x] = tree[x + 1] + tree[z];
+    tree[x] = unite(tree[x + 1], tree[z]);
   }
 
-  void build(int x, int l, int r, const std::vector <int> &v) {
+  node unite(const node &lhs, const node &rhs) const {
+    node res;
+    res.sum = lhs.sum + rhs.sum;
+    return res;
+  }
+
+  template <typename T>
+  void build(int x, int l, int r, const std::vector <T> &v) {
     if (l == r) {
-      tree[x].sum = v[r];
+      tree[x].apply(l, r, v[l]);
       return;
     }
     int mid = (l + r) >> 1;
@@ -62,71 +50,150 @@ public:
     pull(x, z);
   }
 
-  Lazy_Segtree(){};
-  explicit Lazy_Segtree(int _n) : n(_n) {
-    tag.resize(2 * n - 1);
+  Segtree(){};
+  explicit Segtree(int _n) : n(_n) {
     tree.resize(2 * n - 1);
   }
 
-  explicit Lazy_Segtree(const std::vector <int> &v) {
+  template <typename T>
+  explicit Segtree(const std::vector <T> &v) {
     n = static_cast <int> (v.size());
-    tag.resize(2 * n - 1);
     tree.resize(2 * n - 1);
     build(0, 0, n - 1, v);
   }
 
-  void modify(int x, int l, int r, int ql, int qr, const Tag &T) {
+  template <typename ...T>
+  void modify(int x, int l, int r, int ql, int qr, const T&...v) {
     if (ql <= l && r <= qr) {
-      Tag X = T;
-      X.first += X.second * (l - ql);
-      apply(x, l, r, X);
+      tree[x].apply(l, r, v..., l - ql);
       return;
     }
     push(x, l, r);
     int mid = (l + r) >> 1;
     int z = x + ((mid - l + 1) << 1);
     if (ql <= mid) {
-      modify(x + 1, l, mid, ql, qr, T);
+      modify(x + 1, l, mid, ql, qr, v...);
     }
     if (qr > mid) {
-      modify(z, mid + 1, r, ql, qr, T);
+      modify(z, mid + 1, r, ql, qr, v...);
     }
     pull(x, z);
   }
 
-  Node get(int x, int l, int r, int ql, int qr) {
+  node get(int x, int l, int r, int ql, int qr) {
     if (ql <= l && r <= qr) {
       return tree[x];
     }
     push(x, l, r);
     int mid = (l + r) >> 1;
     int z = x + ((mid - l + 1) << 1);
-    Node res{};
+    node res{};
     if (qr <= mid) {
       res = get(x + 1, l, mid, ql, qr);
     } else if (ql > mid) {
       res = get(z, mid + 1, r, ql, qr);
     } else {
-      res = get(x + 1, l, mid, ql, qr) + get(z, mid + 1, r, ql, qr);
+      res = unite(get(x + 1, l, mid, ql, qr), get(z, mid + 1, r, ql, qr));
     }
     return res;
   }
 
-  template <typename ...M>
-  void modify(int l, int r, const M&... Args) {
-    assert(0 <= l && l <= r && r <= n - 1);
-    Tag T = Tag(Args...);
-    modify(0, 0, n - 1, l, r, T);
+  int find_first_knowingly(int x, int l, int r, const std::function <bool(const node&)> &F) {
+    if (l == r) {
+      return r;
+    }
+    push(x, l, r);
+    int mid = (l + r) >> 1;
+    int z = x + ((mid - l + 1) << 1);
+    int res;
+    if (F(tree[x + 1])) {
+      res = find_first_knowingly(x + 1, l, mid, F);
+    } else {
+      res = find_first_knowingly(z, mid + 1, r, F);
+    }
+    return res;
   }
 
-  Node get(int l, int r) {
+  int find_first(int x, int l, int r, int ql, int qr, const std::function <bool(const node &)> &F) {
+    if (ql <= l && r <= qr) {
+      if (!F(tree[x])) {
+        return -1;
+      }
+      return find_first_knowingly(x, l, r, F);
+    }
+    push(x, l, r);
+    int mid = (l + r) >> 1;
+    int z = x + ((mid - l + 1) << 1);
+    int res = -1;
+    if (ql <= mid) {
+      res = find_first(x + 1, l, mid, ql, qr, F);
+    }
+    if (qr > mid && res == -1) {
+      res = find_first(z, mid + 1, r, ql, qr, F);
+    }
+    return res;
+  }
+
+  int find_last_knowingly(int x, int l, int r, const std::function <bool(const node&)> &F) {
+    if (l == r) {
+      return r;
+    }
+    push(x, l, r);
+    int mid = (l + r) >> 1;
+    int z = x + ((mid - l + 1) << 1);
+    int res;
+    if (F(tree[z])) {
+      res = find_last_knowingly(z, mid + 1, r, F);
+    } else {
+      res = find_last_knowingly(x + 1, l, mid, F);
+    }
+    return res;
+  }
+
+  int find_last(int x, int l, int r, int ql, int qr, const std::function <bool(const node&)> &F) {
+    if (ql <= l && r <= qr) {
+      if (!F(tree[x])) {
+        return -1;
+      }
+      return find_last_knowingly(x, l, r, F);
+    }
+    push(x, l, r);
+    int mid = (l + r) >> 1;
+    int z = x + ((mid - l + 1) << 1);
+    int res = -1;
+    if (qr > mid) {
+      res = find_last(z, mid + 1, r, ql, qr, F);
+    }
+    if (ql <= mid && res == -1) {
+      res = find_last(x + 1, l, mid, ql, qr, F);
+    }
+    return res;
+  }
+
+  template <typename ...T>
+  void modify(int l, int r, const T& ...v) {
+    assert(0 <= l && l <= r && r <= n - 1);
+    modify(0, 0, n - 1, l, r, v...);
+  }
+
+  node get(int l, int r) {
     assert(0 <= l && l <= r && r <= n - 1);
     return get(0, 0, n - 1, l, r);
   }
 
-  Node get(int p) {
+  node get(int p) {
     assert(0 <= p && p <= n - 1);
     return get(0, 0, n - 1, p, p);
+  }
+
+  int find_first(int l, int r, const std::function <bool(const node&)> &F) {
+    assert(0 <= l && l <= r && r <= n - 1);
+    return find_first(0, 0, n - 1, l, r, F);
+  }
+
+  int find_last(int l, int r, const std::function <bool(const node&)> &F) {
+    assert(0 <= l && l <= r && r <= n - 1);
+    return find_last(0, 0, n - 1, l, r, F);
   }
 };
 
@@ -134,7 +201,7 @@ void solve() {
   int n, q;
   std::cin >> n >> q;
 
-  Lazy_Segtree <Node, std::pair <int64_t, int64_t>> st(n);
+  Segtree st(n);
   while (q--) {
     int type;
     std::cin >> type;
@@ -146,7 +213,7 @@ void solve() {
     } else {
       int pos;
       std::cin >> pos;
-      Node res = st.get(pos - 1);
+      Segtree::node res = st.get(pos - 1);
       std::cout << res.sum << "\n";
     }
   }
