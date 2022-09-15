@@ -1,0 +1,170 @@
+#include <bits/stdc++.h>
+
+class Node {
+public:
+  int64_t sum = 0;
+  Node(int64_t s = 0) : sum(s){};
+
+  friend Node operator + (const Node &lhs, const Node &rhs) {
+    return Node(lhs.sum + rhs.sum);
+  }
+};
+
+void apply(Node &v, const std::pair <int64_t, int64_t> &T, int l, int r) {
+  v.sum += ((2 * T.first + T.second * (r - l)) * (r - l + 1)) >> 1;
+}
+
+void apply(std::pair <int64_t, int64_t> &lhs, const std::pair <int64_t, int64_t> &rhs) {
+  lhs.first += rhs.first;
+  lhs.second += rhs.second;
+}
+
+template <class Node, class Tag, class Merge = std::plus<Node>>
+class Lazy_Segtree {
+public:
+  int n;
+  std::vector <Tag> tag;
+  std::vector <Node> tree;
+
+  void apply(int x, int l, int r, const Tag &T) {
+    ::apply(tag[x], T);
+    ::apply(tree[x], T, l, r);
+  }
+
+  void push(int x, int l, int r) {
+    if (tag[x] != Tag()) {
+      int mid = (l + r) >> 1;
+      int z = x + ((mid - l + 1) << 1);
+
+      Tag left, right;
+      left = right = tag[x];
+      right.first += tag[x].second * (mid + 1 - l);
+
+      apply(x + 1, l, mid, left);
+      apply(z, mid + 1, r, right);
+      tag[x] = Tag();
+    }
+  }
+
+  inline void pull(int x, int z) {
+    tree[x] = unite(tree[x + 1], tree[z]);
+  }
+
+  Node unite(const Node &lhs, const Node &rhs) const {
+    Node res;
+    res.sum = lhs.sum + rhs.sum;
+    return res;
+  }
+
+  void build(int x, int l, int r, const std::vector <int> &v) {
+    if (l == r) {
+      tree[x].sum = v[r];
+      return;
+    }
+    int mid = (l + r) >> 1;
+    int z = x + ((mid - l + 1) << 1);
+    build(x + 1, l, mid, v);
+    build(z, mid + 1, r, v);
+    pull(x, z);
+  }
+
+  Lazy_Segtree(){};
+  explicit Lazy_Segtree(int _n) : n(_n) {
+    tag.resize(2 * n - 1);
+    tree.resize(2 * n - 1);
+  }
+
+  explicit Lazy_Segtree(const std::vector <int> &v) {
+    n = static_cast <int> (v.size());
+    tag.resize(2 * n - 1);
+    tree.resize(2 * n - 1);
+    build(0, 0, n - 1, v);
+  }
+
+  void modify(int x, int l, int r, int ql, int qr, const Tag &T) {
+    if (ql <= l && r <= qr) {
+      Tag X = T;
+      X.first += X.second * (l - ql);
+      apply(x, l, r, X);
+      return;
+    }
+    push(x, l, r);
+    int mid = (l + r) >> 1;
+    int z = x + ((mid - l + 1) << 1);
+    if (ql <= mid) {
+      modify(x + 1, l, mid, ql, qr, T);
+    }
+    if (qr > mid) {
+      modify(z, mid + 1, r, ql, qr, T);
+    }
+    pull(x, z);
+  }
+
+  Node get(int x, int l, int r, int ql, int qr) {
+    if (ql <= l && r <= qr) {
+      return tree[x];
+    }
+    push(x, l, r);
+    int mid = (l + r) >> 1;
+    int z = x + ((mid - l + 1) << 1);
+    Node res{};
+    if (qr <= mid) {
+      res = get(x + 1, l, mid, ql, qr);
+    } else if (ql > mid) {
+      res = get(z, mid + 1, r, ql, qr);
+    } else {
+      res = unite(get(x + 1, l, mid, ql, qr), get(z, mid + 1, r, ql, qr));
+    }
+    return res;
+  }
+
+  template <typename ...M>
+  void modify(int l, int r, const M&... Args) {
+    assert(0 <= l && l <= r && r <= n - 1);
+    Tag T = Tag(Args...);
+    modify(0, 0, n - 1, l, r, T);
+  }
+
+  Node get(int l, int r) {
+    assert(0 <= l && l <= r && r <= n - 1);
+    return get(0, 0, n - 1, l, r);
+  }
+
+  Node get(int p) {
+    assert(0 <= p && p <= n - 1);
+    return get(0, 0, n - 1, p, p);
+  }
+};
+
+void solve() {
+  int n, q;
+  std::cin >> n >> q;
+
+  Lazy_Segtree <Node, std::pair <int64_t, int64_t>> st(n);
+  while (q--) {
+    int type;
+    std::cin >> type;
+    if (type == 1) {
+      int l, r, a, d;
+      std::cin >> l >> r >> a >> d;
+      --l; --r;
+      st.modify(l, r, a, d);
+    } else {
+      int pos;
+      std::cin >> pos;
+      Node res = st.get(pos - 1);
+      std::cout << res.sum << "\n";
+    }
+  }
+}
+
+int main() {
+  std::ios::sync_with_stdio(false);
+  std::cin.tie(nullptr);
+  int tt = 1;
+  //std::cin >> tt;
+  while (tt--) {
+    solve();
+  }
+  return 0;
+}
