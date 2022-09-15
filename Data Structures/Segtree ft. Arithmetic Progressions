@@ -19,7 +19,7 @@ void apply(std::pair <int64_t, int64_t> &lhs, const std::pair <int64_t, int64_t>
   lhs.second += rhs.second;
 }
 
-template <class Node, class Tag, class Merge = std::plus<Node>>
+template <class Node, class Tag = int>
 class Lazy_Segtree {
 public:
   int n;
@@ -47,13 +47,7 @@ public:
   }
 
   inline void pull(int x, int z) {
-    tree[x] = unite(tree[x + 1], tree[z]);
-  }
-
-  Node unite(const Node &lhs, const Node &rhs) const {
-    Node res;
-    res.sum = lhs.sum + rhs.sum;
-    return res;
+    tree[x] = tree[x + 1] + tree[z];
   }
 
   void build(int x, int l, int r, const std::vector <int> &v) {
@@ -113,7 +107,7 @@ public:
     } else if (ql > mid) {
       res = get(z, mid + 1, r, ql, qr);
     } else {
-      res = unite(get(x + 1, l, mid, ql, qr), get(z, mid + 1, r, ql, qr));
+      res = get(x + 1, l, mid, ql, qr) + get(z, mid + 1, r, ql, qr);
     }
     return res;
   }
