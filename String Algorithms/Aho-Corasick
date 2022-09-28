@@ -1,166 +1,180 @@
 #include <bits/stdc++.h>
-using namespace std;
 
-#ifdef LOCAL
-#include "debug.h"
-#else
-#define debug(...) 42
-#endif
-
-template <const int alphabet = 26>
-class Aho_Corasick {
-public:
+template <const int E = 26>
+class AhoCorasick {
+private:
   struct node {
     int occurences = 0;
-    int parent_char = -1;
+    int parentChar = -1;
     bool terminal = false;
-    node* parent = nullptr;
-    node* suffix_link = nullptr;
-    node* next[alphabet] = {nullptr};
-    vector <node*> incoming_suffix_links = {};
+    std::shared_ptr <node> parent = nullptr;
+    std::shared_ptr <node> suffixLink = nullptr;
+    std::array <std::shared_ptr <node>, E> next = {nullptr};
 
-    int left_occurence = numeric_limits <int>::max();
-    int right_occurence = numeric_limits <int>::min();
+    int leftmostOccurence = std::numeric_limits <int>::max();
+    int rightmostOccurence = std::numeric_limits <int>::min();
+    std::vector <std::shared_ptr <node>> incomingSuffixLinks = {};
 
-    node(node* p, int par_char) {
-      this->parent = p;
-      this->parent_char = par_char;
+    node(const std::shared_ptr <node> &parent, int parentChar) {
+      this->parentChar = parentChar;
+      this->parent = parent;
     }
   };
 
-  node* root = new node(nullptr, -1);
-  node* current_state = root;
+  std::shared_ptr <node> root = std::make_shared <node>(node(nullptr, -1));
+  std::shared_ptr <node> state = root;
 
-  vector <string> dictionary;
-  vector <node*> terminal_nodes;
+  std::vector <std::string> dictionary;
+  std::vector <std::shared_ptr <node>> terminalNodes;
 
-  Aho_Corasick(const vector <string> &_dictionary = {}) {
-    if (!_dictionary.empty()) {
-      build(_dictionary);
-    }
+  inline int index(const char &C) {
+    return C - 'a';
   }
 
-  void build(const vector <string> &_dictionary) {
-    dictionary = _dictionary;
-    terminal_nodes.reserve((int)dictionary.size());
-
-    for (auto &s : dictionary) {
-      this->insert(s);
+  void build() {
+    int n = (int)dictionary.size();
+    terminalNodes.resize(n);
+    for (int i = 0; i < n; ++i) {
+      insert(dictionary[i], i);
     }
 
-    queue <node*> q;
+    std::queue <std::shared_ptr <node>> q;
     q.push(this->root);
-
     while (!q.empty()) {
-      node* v = q.front();
+      std::shared_ptr <node> v = q.front();
       q.pop();
-
-      for (auto &next_node : v->next) {
-        if (next_node != nullptr) {
-          q.push(next_node);
-          find_suffix_link(next_node);
-          next_node->suffix_link->incoming_suffix_links.push_back(next_node);
+      for (std::shared_ptr <node> &child : v->next) {
+        if (child != nullptr) {
+          q.push(child);
+          findSuffixLink(child);
+          child->suffixLink->incomingSuffixLinks.emplace_back(child);
         }
       }
     }
   }
 
-  void insert(const string &s) {
-    node* current_node = this->root;
-    for (auto &c : s) {
-      if (current_node->next[c - 'a'] == nullptr) { //depends on alphabet
-        current_node->next[c - 'a'] = new node(current_node, c - 'a');
+  void insert(const std::string &s, int id) {
+    std::shared_ptr <node> currentNode = this->root;
+    for (char C : s) {
+      int num = index(C);
+      if (currentNode->next[num] == nullptr) {
+        currentNode->next[num] = std::make_shared <node>(node(currentNode, num));
       }
-      current_node = current_node->next[c - 'a'];
+      currentNode = currentNode->next[num];
     }
-    current_node->terminal = true;
-    terminal_nodes.push_back(current_node);
+    currentNode->terminal = true;
+    terminalNodes[id] = currentNode;
   }
 
-  void find_suffix_link(node *v) {
-    node* p = v->parent->suffix_link;
+  void findSuffixLink(std::shared_ptr <node> &v) {
+    std::shared_ptr <node> p = v->parent->suffixLink;
     while (p != nullptr) {
-      if (p->next[v->parent_char] != nullptr) {
-        v->suffix_link = p->next[v->parent_char];
+      if (p->next[v->parentChar] != nullptr) {
+        v->suffixLink = p->next[v->parentChar];
         return;
       }
-      p = p->suffix_link;
+      p = p->suffixLink;
     }
-    v->suffix_link = root;
+    v->suffixLink = this->root;
   }
 
-  void move(int next_char) {
-    if (current_state->next[next_char] != nullptr) {
-      current_state = current_state->next[next_char];
+  void findTransition(int nextChar) {
+    if (state->next[nextChar] != nullptr) {
+      state = state->next[nextChar];
       return;
     }
-    while (current_state->suffix_link != nullptr) {
-      current_state = current_state->suffix_link;
-      if (current_state->next[next_char] != nullptr) {
-        current_state = current_state->next[next_char];
-        break;
+    std::shared_ptr <node> current = state;
+    while (current->suffixLink != nullptr) {
+      current = current->suffixLink;
+      if (current->next[nextChar] != nullptr) {
+        state = current->next[nextChar];
+        return;
       }
     }
+    state = current;
   }
 
-  void dfs(node* v) {
-    for (node* child : v->incoming_suffix_links) {
-      dfs(child);
+  void pullInfo(std::shared_ptr <node> &v) {
+    for (std::shared_ptr <node> &child : v->incomingSuffixLinks) {
+      pullInfo(child);
       v->occurences += child->occurences;
-      v->left_occurence = min(v->left_occurence, child->left_occurence);
-      v->right_occurence = max(v->right_occurence, child->right_occurence);
+      v->leftmostOccurence = std::min(v->leftmostOccurence, child->leftmostOccurence);
+      v->rightmostOccurence = std::max(v->rightmostOccurence, child->rightmostOccurence);
     }
   }
 
-  void process(const string &text) {
-    int timer = 0;
-    for (auto &_char_ : text) {
-      this->move(_char_ - 'a');
-      current_state->occurences += 1;
-      current_state->left_occurence = min(current_state->left_occurence, timer);
-      current_state->right_occurence = max(current_state->right_occurence, timer);
-      timer += 1;
+  void process(const std::string &text) {
+    for (int i = 0; i < text.length(); ++i) {
+      int id = index(text[i]);
+      findTransition(id);
+      state->occurences += 1;
+      state->leftmostOccurence = std::min(state->leftmostOccurence, i);
+      state->rightmostOccurence = std::max(state->rightmostOccurence, i);
     }
-    this->dfs(this->root);
+    pullInfo(this->root);
+  }
+
+public:
+  AhoCorasick(std::vector <std::string> dict) {
+    dictionary = std::move(dict);
+    this->build();
+  }
+
+  std::vector <std::pair <int, int>> getInfo(const std::string &text) {
+    process(text);
+    int n = (int)dictionary.size();
+    std::vector <std::pair <int, int>> result(n);
+    for (int i = 0; i < n; ++i) {
+      std::shared_ptr <node> &v = terminalNodes[i];
+      if (v->leftmostOccurence == std::numeric_limits <int>::max()) {
+        result[i] = std::make_pair(-1, -1);
+      } else {
+        result[i] = std::make_pair(v->leftmostOccurence, v->rightmostOccurence);
+        result[i].first -= (int)dictionary[i].size() - 1;
+        result[i].second -= (int)dictionary[i].size() - 1;
+      }
+    }
+    return result;
   }
 };
 
-void run_case() {
-  int n;
-  cin >> n;
+class Task {
+private:
+public:
+  void solveOne() {
+    int n;
+    std::cin >> n;
 
-  vector <string> dictionary(n);
-  for (auto &s : dictionary) {
-    cin >> s;
-  }
+    std::vector <std::string> dict(n);
+    for (std::string &s : dict) {
+      std::cin >> s;
+    }
 
-  string text;
-  cin >> text;
-
-  Aho_Corasick <26> Aho(dictionary);
-  Aho.process(text);
-
-  for (int i = 0; i < n; ++i) {
-    auto &_node_ = Aho.terminal_nodes[i];
-    if (_node_->left_occurence == numeric_limits <int>::max()) {
-      cout << "-1 -1\n";
-    } else {
-      cout << _node_->left_occurence - (int)dictionary[i].size() + 1 << " ";
-      cout << _node_->right_occurence - (int)dictionary[i].size() + 1 << "\n";
+    std::string text;
+    std::cin >> text;
+    AhoCorasick Aho(dict);
+    for (auto &[l, r] : Aho.getInfo(text)) {
+      std::cout << l << " " << r << "\n";
     }
   }
+
+  void solve() {
+    int tt = 1;
+    //std::cin >> tt;
+    for (int i = 0; i < tt; ++i) {
+      solveOne();
+    }
+  }
+};
+
+void solve() {
+
 }
 
-signed main() {
-  ios::sync_with_stdio(false);
-  cin.tie(0);
-
-  int test_cases = 1;
-  //cin >> test_cases;
-
-  while (test_cases--) {
-    run_case();
-  }
-
+int main() {
+  std::ios::sync_with_stdio(false);
+  std::cin.tie(nullptr);
+  Task Solver = Task();
+  Solver.solve();
   return 0;
 }
